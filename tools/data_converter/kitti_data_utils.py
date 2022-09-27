@@ -47,7 +47,7 @@ def get_image_path(idx,
                    exist_check=True,
                    info_type='image_2',
                    use_prefix_id=False):
-    return get_kitti_info_path(idx, prefix, info_type, '.png', training,
+    return get_kitti_info_path(idx, prefix, info_type, '.jpg', training,
                                relative_path, exist_check, use_prefix_id)
 
 
@@ -205,6 +205,7 @@ def get_kitti_image_info(path,
     if not isinstance(image_ids, list):
         image_ids = list(range(image_ids))
 
+    print(len(image_ids),image_ids[-1])
     def map_func(idx):
         info = {}
         pc_info = {'num_features': 4}
@@ -233,6 +234,7 @@ def get_kitti_image_info(path,
         if calib:
             calib_path = get_calib_path(
                 idx, path, training, relative_path=False)
+            print(calib_path)
             with open(calib_path, 'r') as f:
                 lines = f.readlines()
             P0 = np.array([float(info) for info in lines[0].split(' ')[1:13]
@@ -261,19 +263,20 @@ def get_kitti_image_info(path,
             Tr_velo_to_cam = np.array([
                 float(info) for info in lines[5].split(' ')[1:13]
             ]).reshape([3, 4])
-            Tr_imu_to_velo = np.array([
-                float(info) for info in lines[6].split(' ')[1:13]
-            ]).reshape([3, 4])
+            # Tr_imu_to_velo = np.array([
+                # float(info) for info in lines[6].split(' ')[1:13]
+            # ]).reshape([3, 4])
             if extend_matrix:
                 Tr_velo_to_cam = _extend_matrix(Tr_velo_to_cam)
-                Tr_imu_to_velo = _extend_matrix(Tr_imu_to_velo)
+                # Tr_imu_to_velo = _extend_matrix(Tr_imu_to_velo)
             calib_info['P0'] = P0
             calib_info['P1'] = P1
             calib_info['P2'] = P2
             calib_info['P3'] = P3
             calib_info['R0_rect'] = rect_4x4
             calib_info['Tr_velo_to_cam'] = Tr_velo_to_cam
-            calib_info['Tr_imu_to_velo'] = Tr_imu_to_velo
+            # calib_info['Tr_imu_to_velo'] = Tr_imu_to_velo
+            calib_info['Tr_imu_to_velo'] = np.eye(4)
             info['calib'] = calib_info
 
         if with_plane:
@@ -290,7 +293,8 @@ def get_kitti_image_info(path,
 
     with futures.ThreadPoolExecutor(num_worker) as executor:
         image_infos = executor.map(map_func, image_ids)
-
+    
+    
     return list(image_infos)
 
 
