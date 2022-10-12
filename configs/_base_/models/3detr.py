@@ -1,7 +1,7 @@
 model = dict(
-    type = '3DETR',
+    type = 'DETR3D',
     backbone = dict(
-        type = '3DETR_BACKBONE',
+        type = 'DETR3D_BACKBONE',
         # enc_type = 'maskedv2', # choices=["masked", "maskedv2", "vanilla"]
         # Vanilla encoder args
 
@@ -13,14 +13,15 @@ model = dict(
         ),
 
         encoder_dict = dict(
-            enc_type = 'maskedv2',
+            enc_type = 'masked',
             enc_dim = 256, # same
             enc_nhead = 4,
             enc_ffn_dim = 128,
             enc_dropout = 0.1,
-            enc_activateion = 'relu',
+            enc_activation = 'relu',
             enc_nlayers = 3,
-            enc_pos_embed = None
+            enc_pos_embed = None,
+            preenc_npoints = 2048
         ),
 
         decoder_dict = dict(
@@ -29,13 +30,13 @@ model = dict(
             dec_ffn_dim = 256,
             dec_dropout = 0.1,
             dec_nlayers = 8
-        )
+        ),
 
-        encoder_dim = 256 #enc_dim
-        decoder_dim = 256 #dec_dim
-        mlp_dropout = 0.3 #mlp_dropout
-        num_queries = 256 # nqueries
-
+        encoder_dim = 256, #enc_dim
+        decoder_dim = 256, #dec_dim
+        mlp_dropout = 0.3, #mlp_dropout
+        num_queries = 256, # nqueries
+        dataset_config = None
 
 
         # enc_nlayers = 3,
@@ -53,11 +54,9 @@ model = dict(
         # dec_nhead = 4,
         # other model params
         # preenc_npoints = 2048,
-        pos_embed = 'fourier', # choices=["fourier", "sine"]
-        nqueries = 256,
+        # pos_e/mbed = 'fourier', # choices=["fourier", "sine"]
+        # nqueries = 256,
         # use_color = False, # DONT NEED?   
-
-
     ),
     bbox_head = dict(
         type = 'BoxProcessor', # 3detr boxprocessor

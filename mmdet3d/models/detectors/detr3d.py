@@ -5,7 +5,7 @@ from .single_stage import SingleStage3DDetector
 
 
 @DETECTORS.register_module()
-class detr3d(SingleStage3DDetector):
+class DETR3D(SingleStage3DDetector):
     """
     3DETR 
     """
@@ -28,3 +28,21 @@ class detr3d(SingleStage3DDetector):
             test_cfg, 
             init_cfg, 
             pretrained)
+
+
+
+
+
+
+
+    def forward_train(self, imgs, img_metas, **kwargs):
+        
+        
+        return super().forward_train(imgs, img_metas, **kwargs)
+
+
+    def simple_test(self, img, img_metas, **kwargs):
+        return 
+
+    def aug_test(self, imgs, img_metas, **kwargs):
+        return super().aug_test(imgs, img_metas, **kwargs)

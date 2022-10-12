@@ -1,5 +1,5 @@
-base = [
-    '../_base_/models/3detr.py', '../_base_/datasets/vod_lidar-3d-3class.py',
+_base_ = [
+    '../_base_/models/3detr.py', '../_base_/datasets/vod-lidar-3d-3class.py',
     '../_base_/default_runtime.py'
 ]
 

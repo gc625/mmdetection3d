@@ -72,7 +72,7 @@ class BoxProcessor(object):
 
 
 @BACKBONES.register_module()
-class Model3DETR(nn.Module):
+class DETR3D_BACKBONE(nn.Module):
     """
     Main 3DETR model. Consists of the following learnable sub-models
     - pre_encoder: takes raw point cloud, subsamples it and projects into "D" dimensions
@@ -105,6 +105,8 @@ class Model3DETR(nn.Module):
 
         self.pre_encoder = build_preencoder_withargs(preenc_dict)
         self.encoder = build_encoder_withargs(encoder_dict)
+
+
 
 
         if hasattr(self.encoder, "masking_radius"):
@@ -500,7 +502,7 @@ def build_3detr(args, dataset_config):
     pre_encoder = build_preencoder(args)
     encoder = build_encoder(args)
     decoder = build_decoder(args)
-    model = Model3DETR(
+    model = DETR3D_BACKBONE(
         pre_encoder,
         encoder,
         decoder,
