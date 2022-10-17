@@ -61,6 +61,37 @@ train_pipeline = [
     # 3DSSD can get a higher performance without this transform
     # dict(type='BackgroundPointsFilter', bbox_enlarge_range=(0.5, 2.0, 0.5)),
     dict(type='PointSample', num_points=16384),
+    # dict(type='Get3detrLabels'),
     dict(type='DefaultFormatBundle3D', class_names=class_names),
     dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
+
+
+
 ]
+
+# In practice PointPillars also uses a different schedule
+# optimizer
+lr = 5e-4
+optimizer = dict(type='AdamW', lr=lr, weight_decay=0)
+# max_norm=35 is slightly better than 10 for PointPillars in the earlier
+# development of the codebase thus we keep the setting. But we does not
+# specifically tune this parameter.
+optimizer_config = dict(grad_clip=dict(max_norm=10, norm_type=2))
+lr_config = dict(policy='step', warmup=None, step=[45, 60])
+
+runner = dict(type='EpochBasedRunner', max_epochs=80)
+
+# Use evaluation interval=2 reduce the number of evaluation timese
+evaluation = dict(interval=1)
+
+
+#    parser.add_argument("--base_lr", default=5e-4, type=float)
+    # parser.add_argument("--warm_lr", default=1e-6, type=float)
+    # parser.add_argument("--warm_lr_epochs", default=9, type=int)
+    # parser.add_argument("--final_lr", default=1e-6, type=float)
+    # parser.add_argument("--lr_scheduler", default="cosine", type=str)
+    # parser.add_argument("--weight_decay", default=0.1, type=float)
+    # parser.add_argument("--filter_biases_wd", default=False, action="store_true")
+    # parser.add_argument(
+    #     "--clip_gradient", default=0.1, type=float, help="Max L2 norm of the gradient"
+    # )

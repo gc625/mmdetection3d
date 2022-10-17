@@ -1,28 +1,54 @@
 from mmcv.runner import BaseModule
 from mmdet3d.models.builder import HEADS
-from losses.detr3d_loss import build_criterion
+from mmdet3d.models.losses.detr3d_loss import build_criterion
+import numpy as np
+import torch
 @HEADS.register_module()
 class DETR3DBboxHead(BaseModule):
 
-    def __init__(self, 
-    query_xyz,
-    point_cloud_dims,
-    box_features,
-    init_cfg = None):
+    def __init__(
+        self, 
+        mlp_dropout,
+        num_semcls,
+        matcher_giou_cost,
+        matcher_cls_cost,
+        matcher_center_cost,
+        matcher_objectness_cost,
+        loss_giou_weight,
+        loss_sem_cls_weight,
+        loss_no_object_weight,
+        loss_angle_cls_weight,
+        loss_angle_reg_weight,
+        loss_center_weight,
+        loss_size_weight,
+        num_angle_bin,
+        train_cfg = None,
+        test_cfg = None,
+        init_cfg = None
+        ):
         super().__init__(init_cfg=init_cfg)
 
-        self.query_xyz = query_xyz
-        self.point_cloud_dims = point_cloud_dims
-        self.box_features = box_features
-
+        self.loss = build_criterion(
+            matcher_cls_cost,
+            matcher_giou_cost,
+            matcher_center_cost,
+            matcher_objectness_cost,
+            loss_giou_weight,
+            loss_sem_cls_weight,
+            loss_no_object_weight,
+            loss_angle_cls_weight,
+            loss_angle_reg_weight,
+            loss_center_weight,
+            loss_size_weight,
+            num_semcls,
+            num_angle_bin)
 
     #TODO: 
 
     def loss(self):
         pass
 
-    def get_bboxes(self):
-        pass
+
 
 
     def get_box_predictions(
@@ -126,11 +152,13 @@ class DETR3DBboxHead(BaseModule):
             }
 
 
-    def forward(self):
+    def forward(self,query_xyz,point_cloud_dims,box_features):
         outputs = self.get_box_predictions(
-            self.query_xyz,
-            self.point_cloud_dims,
-            self.box_features)
+            query_xyz,
+            point_cloud_dims,
+            box_features)
+
+        return outputs
 
         
-
+    

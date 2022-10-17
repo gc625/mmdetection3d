@@ -17,57 +17,6 @@ from mmdet3d.ops.detr3d_modules.transformer import (MaskedTransformerEncoder, Tr
                                 TransformerEncoderLayer)
 
 
-class BoxProcessor(object):
-    """
-    Class to convert 3DETR MLP head outputs into bounding boxes
-    """
-
-    def __init__(self, dataset_config):
-        self.dataset_config = dataset_config
-
-    def compute_predicted_center(self, center_offset, query_xyz, point_cloud_dims):
-        center_unnormalized = query_xyz + center_offset
-        center_normalized = shift_scale_points(
-            center_unnormalized, src_range=point_cloud_dims
-        )
-        return center_normalized, center_unnormalized
-
-    def compute_predicted_size(self, size_normalized, point_cloud_dims):
-        scene_scale = point_cloud_dims[1] - point_cloud_dims[0]
-        scene_scale = torch.clamp(scene_scale, min=1e-1)
-        size_unnormalized = scale_points(size_normalized, mult_factor=scene_scale)
-        return size_unnormalized
-
-    def compute_predicted_angle(self, angle_logits, angle_residual):
-        if angle_logits.shape[-1] == 1:
-            # special case for datasets with no rotation angle
-            # we still use the predictions so that model outputs are used
-            # in the backwards pass (DDP may complain otherwise)
-            angle = angle_logits * 0 + angle_residual * 0
-            angle = angle.squeeze(-1).clamp(min=0)
-        else:
-            angle_per_cls = 2 * np.pi / self.dataset_config.num_angle_bin
-            pred_angle_class = angle_logits.argmax(dim=-1).detach()
-            angle_center = angle_per_cls * pred_angle_class
-            angle = angle_center + angle_residual.gather(
-                2, pred_angle_class.unsqueeze(-1)
-            ).squeeze(-1)
-            mask = angle > np.pi
-            angle[mask] = angle[mask] - 2 * np.pi
-        return angle
-
-    def compute_objectness_and_cls_prob(self, cls_logits):
-        assert cls_logits.shape[-1] == self.dataset_config.num_semcls + 1
-        cls_prob = torch.nn.functional.softmax(cls_logits, dim=-1)
-        objectness_prob = 1 - cls_prob[..., -1]
-        return cls_prob[..., :-1], objectness_prob
-
-    def box_parametrization_to_corners(
-        self, box_center_unnorm, box_size_unnorm, box_angle
-    ):
-        return self.dataset_config.box_parametrization_to_corners(
-            box_center_unnorm, box_size_unnorm, box_angle
-        )
 
 
 
@@ -94,7 +43,6 @@ class DETR3D_BACKBONE(nn.Module):
         preenc_dict,
         encoder_dict,
         decoder_dict,
-        dataset_config,
         encoder_dim=256,
         decoder_dim=256,
         position_embedding="fourier",
@@ -136,41 +84,9 @@ class DETR3D_BACKBONE(nn.Module):
             hidden_use_bias=True,
         )
         self.decoder = build_decoder_withargs(decoder_dict)
-        self.build_mlp_heads(dataset_config, decoder_dim, mlp_dropout)
 
-        self.num_queries = num_queries
-        self.box_processor = BoxProcessor(dataset_config)
 
-    def build_mlp_heads(self, dataset_config, decoder_dim, mlp_dropout):
-        mlp_func = partial(
-            GenericMLP,
-            norm_fn_name="bn1d",
-            activation="relu",
-            use_conv=True,
-            hidden_dims=[decoder_dim, decoder_dim],
-            dropout=mlp_dropout,
-            input_dim=decoder_dim,
-        )
-
-        # Semantic class of the box
-        # add 1 for background/not-an-object class
-        semcls_head = mlp_func(output_dim=dataset_config.num_semcls + 1)
-
-        # geometry of the box
-        center_head = mlp_func(output_dim=3)
-        size_head = mlp_func(output_dim=3)
-        angle_cls_head = mlp_func(output_dim=dataset_config.num_angle_bin)
-        angle_reg_head = mlp_func(output_dim=dataset_config.num_angle_bin)
-
-        mlp_heads = [
-            ("sem_cls_head", semcls_head),
-            ("center_head", center_head),
-            ("size_head", size_head),
-            ("angle_cls_head", angle_cls_head),
-            ("angle_residual_head", angle_reg_head),
-        ]
-        self.mlp_heads = nn.ModuleDict(mlp_heads)
-
+    
     def get_query_embeddings(self, encoder_xyz, point_cloud_dims):
         query_inds = furthest_point_sample(encoder_xyz, self.num_queries)
         query_inds = query_inds.long()
@@ -498,19 +414,19 @@ def build_decoder_withargs(args):
 
 
 
-def build_3detr(args, dataset_config):
-    pre_encoder = build_preencoder(args)
-    encoder = build_encoder(args)
-    decoder = build_decoder(args)
-    model = DETR3D_BACKBONE(
-        pre_encoder,
-        encoder,
-        decoder,
-        dataset_config,
-        encoder_dim=args.enc_dim,
-        decoder_dim=args.dec_dim,
-        mlp_dropout=args.mlp_dropout,
-        num_queries=args.nqueries,
-    )
-    output_processor = BoxProcessor(dataset_config)
-    return model, output_processor
+# def build_3detr(args, dataset_config):
+#     pre_encoder = build_preencoder(args)
+#     encoder = build_encoder(args)
+#     decoder = build_decoder(args)
+#     model = DETR3D_BACKBONE(
+#         pre_encoder,
+#         encoder,
+#         decoder,
+#         dataset_config,
+#         encoder_dim=args.enc_dim,
+#         decoder_dim=args.dec_dim,
+#         mlp_dropout=args.mlp_dropout,
+#         num_queries=args.nqueries,
+#     )
+#     output_processor = BoxProcessor(dataset_config)
+#     return model, output_processor

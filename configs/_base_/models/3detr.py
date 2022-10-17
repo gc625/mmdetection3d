@@ -36,7 +36,6 @@ model = dict(
         decoder_dim = 256, #dec_dim
         mlp_dropout = 0.3, #mlp_dropout
         num_queries = 256, # nqueries
-        dataset_config = None
 
 
         # enc_nlayers = 3,
@@ -59,11 +58,12 @@ model = dict(
         # use_color = False, # DONT NEED?   
     ),
     bbox_head = dict(
-        type = 'BoxProcessor', # 3detr boxprocessor
+        type = 'DETR3DBboxHead', # 3detr boxprocessor
         
         # MLP Heads for bounding boxes
-        mlp_droupout = 0.3,
-        nsemcls = -1, # inferred from dataset
+        mlp_dropout = 0.3,
+        num_semcls = 3, # inferred from dataset #? might need to define
+
 
         # MATCHER
         matcher_giou_cost = 2,
@@ -78,12 +78,15 @@ model = dict(
         loss_angle_cls_weight = 0.1,
         loss_angle_reg_weight = 0.5,
         loss_center_weight = 5.0,
-        loss_size_weight = 1.0 
+        loss_size_weight = 1.0, 
+
+
+        # dataset cfg original 
+        num_angle_bin = 12 
+
+
+
     ),
-    train_cfg = dict(
-        # stuff
-    ),
-    test_cfg = dict(
-        # stuff
-    )
+
+
 )

@@ -1,8 +1,6 @@
-from telnetlib import DET
-from tokenize import Single
 from ..builder import DETECTORS
 from .single_stage import SingleStage3DDetector
-
+import torch
 
 @DETECTORS.register_module()
 class DETR3D(SingleStage3DDetector):
@@ -29,16 +27,18 @@ class DETR3D(SingleStage3DDetector):
             init_cfg, 
             pretrained)
 
-
-
-
-
-
-
-    def forward_train(self, imgs, img_metas, **kwargs):
         
+
+
+
+
+
+    def forward_train(self, points, img_metas, **kwargs):
+        points_cat = torch.stack(points)
+        feats = self.backbone(points_cat)
+
         
-        return super().forward_train(imgs, img_metas, **kwargs)
+        return 
 
 
     def simple_test(self, img, img_metas, **kwargs):

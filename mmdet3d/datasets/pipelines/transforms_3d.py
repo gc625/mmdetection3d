@@ -1020,6 +1020,10 @@ class ObjectNameFilter(object):
         return repr_str
 
 
+
+
+
+
 @PIPELINES.register_module()
 class PointSample(object):
     """Point sample.
@@ -1850,4 +1854,50 @@ class RandomShiftScale(object):
         repr_str = self.__class__.__name__
         repr_str += f'(shift_scale={self.shift_scale}, '
         repr_str += f'aug_prob={self.aug_prob}) '
+        return repr_str
+
+
+@PIPELINES.register_module()
+
+class Get3detrLabels(object):
+
+
+    def __init__(self):
+        self.temp = 0
+
+    def __call__(self, results):
+        
+        point_cloud = results['points']
+
+        
+
+
+        ret_dict = {}
+        ret_dict["point_clouds"] = point_cloud.astype(np.float32)
+        ret_dict["gt_box_corners"] = box_corners.astype(np.float32)
+        # ret_dict["gt_box_centers"] = box_centers.astype(np.float32)
+        # ret_dict["gt_box_centers_normalized"] = box_centers_normalized.astype(
+        #     np.float32
+        # )
+        # ret_dict["gt_angle_class_label"] = angle_classes.astype(np.int64)
+        # ret_dict["gt_angle_residual_label"] = angle_residuals.astype(np.float32)
+        # target_bboxes_semcls = np.zeros((MAX_NUM_OBJ))
+        # target_bboxes_semcls[0 : instance_bboxes.shape[0]] = [
+        #     self.dataset_config.nyu40id2class[int(x)]
+        #     for x in instance_bboxes[:, -1][0 : instance_bboxes.shape[0]]
+        # ]
+        # ret_dict["gt_box_sem_cls_label"] = target_bboxes_semcls.astype(np.int64)
+        # ret_dict["gt_box_present"] = target_bboxes_mask.astype(np.float32)
+        # ret_dict["scan_idx"] = np.array(idx).astype(np.int64)
+        # ret_dict["pcl_color"] = pcl_color
+        # ret_dict["gt_box_sizes"] = raw_sizes.astype(np.float32)
+        # ret_dict["gt_box_sizes_normalized"] = box_sizes_normalized.astype(np.float32)
+        # ret_dict["gt_box_angles"] = raw_angles.astype(np.float32)
+        # ret_dict["point_cloud_dims_min"] = point_cloud_dims_min.astype(np.float32)
+        # ret_dict["point_cloud_dims_max"] = point_cloud_dims_max.astype(np.float32)
+        return results
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        # repr_str += f'(shift_scale={self.shift_scale}, '
+        # repr_str += f'aug_prob={self.aug_prob}) '
         return repr_str

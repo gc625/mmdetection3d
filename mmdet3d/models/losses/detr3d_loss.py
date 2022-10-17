@@ -87,13 +87,13 @@ class Matcher(nn.Module):
 
 @LOSSES.register_module()
 class SetCriterion(nn.Module):
-    def __init__(self, matcher, dataset_config, loss_weight_dict):
+    def __init__(self, matcher, num_semcls, num_angle_bin,loss_weight_dict):
         super().__init__()
-        self.dataset_config = dataset_config
         self.matcher = matcher
+        self.num_angle_bin = num_angle_bin
         self.loss_weight_dict = loss_weight_dict
 
-        semcls_percls_weights = torch.ones(dataset_config.num_semcls + 1)
+        semcls_percls_weights = torch.ones(num_semcls + 1)
         semcls_percls_weights[-1] = loss_weight_dict["loss_no_object_weight"]
         del loss_weight_dict["loss_no_object_weight"]
         self.register_buffer("semcls_percls_weights", semcls_percls_weights)
@@ -165,7 +165,7 @@ class SetCriterion(nn.Module):
             gt_angle_label = targets["gt_angle_class_label"]
             gt_angle_residual = targets["gt_angle_residual_label"]
             gt_angle_residual_normalized = gt_angle_residual / (
-                np.pi / self.dataset_config.num_angle_bin
+                np.pi / self.num_angle_bin
             )
 
             # # Non vectorized version
@@ -375,22 +375,37 @@ class SetCriterion(nn.Module):
         return loss, loss_dict
 
 
-def build_criterion(args, dataset_config):
+def build_criterion(
+    matcher_cls_cost,
+    matcher_giou_cost,
+    matcher_center_cost,
+    matcher_objectness_cost,
+    loss_giou_weight,
+    loss_sem_cls_weight,
+    loss_no_object_weight,
+    loss_angle_cls_weight,
+    loss_angle_reg_weight,
+    loss_center_weight,
+    loss_size_weight,
+    num_semcls, 
+    num_angle_bin,
+    ):
+    
     matcher = Matcher(
-        cost_class=args.matcher_cls_cost,
-        cost_giou=args.matcher_giou_cost,
-        cost_center=args.matcher_center_cost,
-        cost_objectness=args.matcher_objectness_cost,
+        cost_class=matcher_cls_cost,
+        cost_giou=matcher_giou_cost,
+        cost_center=matcher_center_cost,
+        cost_objectness=matcher_objectness_cost,
     )
 
     loss_weight_dict = {
-        "loss_giou_weight": args.loss_giou_weight,
-        "loss_sem_cls_weight": args.loss_sem_cls_weight,
-        "loss_no_object_weight": args.loss_no_object_weight,
-        "loss_angle_cls_weight": args.loss_angle_cls_weight,
-        "loss_angle_reg_weight": args.loss_angle_reg_weight,
-        "loss_center_weight": args.loss_center_weight,
-        "loss_size_weight": args.loss_size_weight,
+        "loss_giou_weight": loss_giou_weight,
+        "loss_sem_cls_weight": loss_sem_cls_weight,
+        "loss_no_object_weight": loss_no_object_weight,
+        "loss_angle_cls_weight": loss_angle_cls_weight,
+        "loss_angle_reg_weight": loss_angle_reg_weight,
+        "loss_center_weight": loss_center_weight,
+        "loss_size_weight": loss_size_weight,
     }
-    criterion = SetCriterion(matcher, dataset_config, loss_weight_dict)
+    criterion = SetCriterion(matcher, num_semcls, num_angle_bin, loss_weight_dict)
     return criterion
