@@ -1862,14 +1862,32 @@ class RandomShiftScale(object):
 class Get3detrLabels(object):
 
 
-    def __init__(self):
-        self.temp = 0
+    def __init__(self,max_num_obj):
+        self.MAX_NUM_OBJ = max_num_obj
 
     def __call__(self, results):
         
+        target_bboxes = np.zeros((self.MAX_NUM_OBJ, 6), dtype=np.float32)
+        target_bboxes_mask = np.zeros((self.MAX_NUM_OBJ), dtype=np.float32)
+        angle_classes = np.zeros((self.MAX_NUM_OBJ,), dtype=np.int64)
+        angle_residuals = np.zeros((self.MAX_NUM_OBJ,), dtype=np.float32)
+        raw_sizes = np.zeros((self.MAX_NUM_OBJ, 3), dtype=np.float32)
+        raw_angles = np.zeros((self.MAX_NUM_OBJ,), dtype=np.float32)
         point_cloud = results['points']
 
-        
+
+# TODO: gt_box_corners
+# TODO: gt_box_centers_normalized
+# TODO: gt_angle_class_label      
+# TODO: gt_angle_residual_label
+# TODO: gt_box_sem_cls_label ? should just be class of bbx? 
+# TODO: gt_box_present
+# TODO: gt_box_sizes
+# TODO: gt_box_sizes_normalized
+# TODO: gt_box_angles
+# TODO: point_cloud_dims_min
+# TODO: point_cloud_dims_max
+
 
 
         ret_dict = {}
@@ -1881,7 +1899,7 @@ class Get3detrLabels(object):
         # )
         # ret_dict["gt_angle_class_label"] = angle_classes.astype(np.int64)
         # ret_dict["gt_angle_residual_label"] = angle_residuals.astype(np.float32)
-        # target_bboxes_semcls = np.zeros((MAX_NUM_OBJ))
+        # target_bboxes_semcls = np.zeros((self.MAX_NUM_OBJ))
         # target_bboxes_semcls[0 : instance_bboxes.shape[0]] = [
         #     self.dataset_config.nyu40id2class[int(x)]
         #     for x in instance_bboxes[:, -1][0 : instance_bboxes.shape[0]]
