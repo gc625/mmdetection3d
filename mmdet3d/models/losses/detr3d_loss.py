@@ -29,7 +29,7 @@ class Matcher(nn.Module):
         batchsize = outputs["sem_cls_prob"].shape[0]
         nqueries = outputs["sem_cls_prob"].shape[1]
         ngt = targets["gt_box_sem_cls_label"].shape[1]
-        nactual_gt = targets["nactual_gt"]
+        nactual_gt = targets["nactual_gt"]  
 
         # classification cost: batch x nqueries x ngt matrix
         pred_cls_prob = outputs["sem_cls_prob"]
@@ -38,7 +38,11 @@ class Matcher(nn.Module):
             .unsqueeze(1)
             .expand(batchsize, nqueries, ngt)
         )
-        class_mat = -torch.gather(pred_cls_prob, 2, gt_box_sem_cls_labels)
+
+        # negative labels fucking shit up i think
+        # ? SOMETHING HERE? probably should filter out dont care
+        # TRY ObjectNameFilter
+        class_mat = -torch.gather(pred_cls_prob, 2, gt_box_sem_cls_labels) 
 
         # objectness cost: batch x nqueries x 1
         objectness_mat = -outputs["objectness_prob"].unsqueeze(-1)
@@ -325,7 +329,8 @@ class SetCriterion(nn.Module):
             needs_grad=(self.loss_weight_dict["loss_giou_weight"] > 0),
         )
 
-        outputs["gious"] = gious
+        outputs["gious"] = gious # gious is negative for some reason
+
         center_dist = torch.cdist(
             outputs["center_normalized"], targets["gt_box_centers_normalized"], p=1
         )
