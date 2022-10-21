@@ -69,7 +69,7 @@ def shift_scale_points(pred_xyz, src_range, dst_range=None):
 def scale_points(pred_xyz, mult_factor):
     if pred_xyz.ndim == 4:
         mult_factor = mult_factor[:, None]
-    scaled_xyz = pred_xyz * mult_factor[:, None, :]
+    scaled_xyz = pred_xyz * mult_factor[:, None, :] #changed to np.array
     return scaled_xyz
 
 

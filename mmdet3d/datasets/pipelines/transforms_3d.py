@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import random
 import warnings
-
+import torch
 import cv2
 import numpy as np
 from mmcv import is_tuple_of
@@ -15,7 +15,8 @@ from mmdet.datasets.pipelines import RandomCrop, RandomFlip, Rotate
 from ..builder import OBJECTSAMPLERS, PIPELINES
 from .data_augment_utils import noise_per_object_v3_
 
-
+from mmdet3d.ops.detr3d_utils.box_util import flip_axis_to_camera_np, flip_axis_to_camera_tensor, get_3d_box_batch_np, get_3d_box_batch_tensor
+from mmdet3d.ops.detr3d_utils.pc_util import scale_points, shift_scale_points, rotz
 @PIPELINES.register_module()
 class RandomDropPointsColor(object):
     r"""Randomly set the color of points to all zeros.
@@ -1856,63 +1857,224 @@ class RandomShiftScale(object):
         repr_str += f'aug_prob={self.aug_prob}) '
         return repr_str
 
+@PIPELINES.register_module()
+class GetPointcloudMinMax(object):
+    def __init__(self):
+        self.min_range = self.max_range = 0
+        
+    def __call__(self,results):
+
+
+        point_cloud = results['points']
+        point_cloud_dims_min = point_cloud.tensor.min(axis=0)[0][:3]
+        point_cloud_dims_max = point_cloud.tensor.max(axis=0)[0][:3]
+        self.min_range = point_cloud_dims_min
+        self.max_range = point_cloud_dims_max
+        results["point_cloud_dims_min"] = self.min_range 
+        results["point_cloud_dims_max"] = self.max_range 
+        
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__
+        repr_str += f'(point_cloud_dims_min={self.min_range}, '
+        repr_str += f'point_cloud_dims_max={self.max_range}) '
+        return repr_str
+
+    
+
 
 @PIPELINES.register_module()
-
 class Get3detrLabels(object):
 
 
-    def __init__(self,max_num_obj):
+    def __init__(self,max_num_obj,num_angle_bin):
+        self.num_angle_bin = num_angle_bin
         self.MAX_NUM_OBJ = max_num_obj
+        self.center_normalizing_range = [
+            np.zeros((1, 3), dtype=np.float32),
+            np.ones((1, 3), dtype=np.float32),
+        ]
 
+    def flip_lidar_axis_to_camera_np(self,pc):
+        pc2 = pc.copy() 
+        pc2[..., [0, 1, 2]] = pc2[..., [1, 2, 0]]  # cam X,Y,Z = lidar -Y,-Z,X
+        pc2[..., 1] *= -1
+        pc2[..., 0] *= -1
+        return pc2
+
+    def box_parametrization_to_corners_np(self, box_center_unnorm, box_size, box_angle):
+        box_center_upright = self.flip_lidar_axis_to_camera_np(box_center_unnorm)
+        boxes = get_3d_box_batch_np(box_size, box_angle, box_center_upright)
+        return boxes
+
+    def angle2class(self, angle):
+        """Convert continuous angle to discrete class
+        [optinal] also small regression number from
+        class center angle to current angle.
+
+        angle is from 0-2pi (or -pi~pi), class center at 0, 1*(2pi/N), 2*(2pi/N) ...  (N-1)*(2pi/N)
+        returns class [0,1,...,N-1] and a residual number such that
+            class*(2pi/N) + number = angle
+        """
+        num_class = self.num_angle_bin
+        angle = angle % (2 * np.pi)
+        assert angle >= 0 and angle <= 2 * np.pi
+        angle_per_class = 2 * np.pi / float(num_class)
+        shifted_angle = (angle + angle_per_class / 2) % (2 * np.pi)
+        class_id = int(shifted_angle / angle_per_class)
+        residual_angle = shifted_angle - (
+            class_id * angle_per_class + angle_per_class / 2
+        )
+        return class_id, residual_angle
+
+    def class2angle(self, pred_cls, residual, to_label_format=True):
+        """Inverse function to angle2class"""
+        num_class = self.num_angle_bin
+        angle_per_class = 2 * np.pi / float(num_class)
+        angle_center = pred_cls * angle_per_class
+        angle = angle_center + residual
+        if to_label_format and angle > np.pi:
+            angle = angle - 2 * np.pi
+        return angle
+
+    def class2angle_batch(self, pred_cls, residual, to_label_format=True):
+        num_class = self.num_angle_bin
+        angle_per_class = 2 * np.pi / float(num_class)
+        angle_center = pred_cls * angle_per_class
+        angle = angle_center + residual
+        if to_label_format:
+            mask = angle > np.pi
+            angle[mask] = angle[mask] - 2 * np.pi
+        return angle
+
+    def class2anglebatch_tensor(self, pred_cls, residual, to_label_format=True):
+        return self.class2angle_batch(pred_cls, residual, to_label_format)
+
+    def box_parametrization_to_corners(self, box_center_unnorm, box_size, box_angle):
+        box_center_upright = flip_axis_to_camera_tensor(box_center_unnorm)
+        boxes = get_3d_box_batch_tensor(box_size, box_angle, box_center_upright)
+        return boxes
+
+    def my_compute_box_3d(self, center, size, heading_angle):
+        # TODO: CHECK IF THIS IS CORRECT????? 
+        R = rotz(-1 * heading_angle)
+        l, w, h = size
+        x_corners = [-l, l, l, -l, -l, l, l, -l]
+        y_corners = [w, w, -w, -w, w, w, -w, -w]
+        z_corners = [h, h, h, h, -h, -h, -h, -h]
+        corners_3d = np.dot(R, np.vstack([x_corners, y_corners, z_corners]))
+        corners_3d[0, :] += np.array(center[0])
+        corners_3d[1, :] += np.array(center[1])
+        corners_3d[2, :] += np.array(center[2])
+        return np.transpose(corners_3d)
+
+    
     def __call__(self, results):
         
-        target_bboxes = np.zeros((self.MAX_NUM_OBJ, 6), dtype=np.float32)
-        target_bboxes_mask = np.zeros((self.MAX_NUM_OBJ), dtype=np.float32)
-        angle_classes = np.zeros((self.MAX_NUM_OBJ,), dtype=np.int64)
+        # getting points and gt_bboxes from mmdetect3d loader
+        bboxes = results['gt_bboxes_3d'].tensor 
+        point_cloud = results['points'].tensor
+
+
+        # DETR3D vars
+        angle_classes = np.zeros((self.MAX_NUM_OBJ,), dtype=np.float32)
         angle_residuals = np.zeros((self.MAX_NUM_OBJ,), dtype=np.float32)
-        raw_sizes = np.zeros((self.MAX_NUM_OBJ, 3), dtype=np.float32)
         raw_angles = np.zeros((self.MAX_NUM_OBJ,), dtype=np.float32)
-        point_cloud = results['points']
+        raw_sizes = np.zeros((self.MAX_NUM_OBJ, 3), dtype=np.float32)
+        label_mask = np.zeros((self.MAX_NUM_OBJ))
+        label_mask[0 : bboxes.shape[0]] = 1
+        # max_bboxes = np.zeros((self.MAX_NUM_OBJ, 8))
+        # max_bboxes[0 : bboxes.shape[0], :] = bboxes
 
 
-# TODO: gt_box_corners
-# TODO: gt_box_centers_normalized
-# TODO: gt_angle_class_label      
-# TODO: gt_angle_residual_label
-# TODO: gt_box_sem_cls_label ? should just be class of bbx? 
-# TODO: gt_box_present
-# TODO: gt_box_sizes
-# TODO: gt_box_sizes_normalized
-# TODO: gt_box_angles
-# TODO: point_cloud_dims_min
-# TODO: point_cloud_dims_max
+        target_bboxes_mask = label_mask
+        target_bboxes = np.zeros((self.MAX_NUM_OBJ, 6))
+        target_bboxes_mask[0 : bboxes.shape[0]] = 1
+        for i in range(bboxes.shape[0]):
+            bbox = bboxes[i]
+            raw_angles[i] = bbox[6] % 2 * np.pi
+            box3d_size = bbox[3:6] * 2
+            raw_sizes[i, :] = box3d_size
+            angle_class, angle_residual = self.angle2class(bbox[6])
+            angle_classes[i] = angle_class
+            angle_residuals[i] = angle_residual
+            corners_3d = self.my_compute_box_3d(
+                bbox[0:3], bbox[3:6], bbox[6]
+            )
+            xmin = np.min(corners_3d[:, 0])
+            ymin = np.min(corners_3d[:, 1])
+            zmin = np.min(corners_3d[:, 2])
+            xmax = np.max(corners_3d[:, 0])
+            ymax = np.max(corners_3d[:, 1])
+            zmax = np.max(corners_3d[:, 2])
+            target_bbox = np.array(
+                [
+                    (xmin + xmax) / 2,
+                    (ymin + ymax) / 2,
+                    (zmin + zmax) / 2,
+                    xmax - xmin,
+                    ymax - ymin,
+                    zmax - zmin,
+                ]
+            )
+            target_bboxes[i, :] = target_bbox
 
+        point_cloud_dims_min = point_cloud.min(axis=0)[0][:3]
+        point_cloud_dims_max = point_cloud.max(axis=0)[0][:3]
 
+        mult_factor = point_cloud_dims_max - point_cloud_dims_min
+        box_sizes_normalized = scale_points(
+            torch.from_numpy(raw_sizes[None, ...]),
+            mult_factor=1.0 / mult_factor[None, ...],
+        )
+        box_sizes_normalized = torch.Tensor.numpy(box_sizes_normalized).astype(np.float32).squeeze(0)
+
+        box_centers = target_bboxes.astype(np.float32)[:, 0:3]
+        box_centers_normalized = shift_scale_points(
+            torch.from_numpy(box_centers[None, ...]),
+            src_range= torch.stack([
+                point_cloud_dims_min[None, ...],
+                point_cloud_dims_max[None, ...],
+            ]),
+            dst_range=torch.Tensor(np.array(self.center_normalizing_range)),
+        )
+        box_centers_normalized = box_centers_normalized.squeeze(0)
+        box_centers_normalized = box_centers_normalized * target_bboxes_mask[..., None]
+
+        # this is sus, originally its depth coords -> camera
+        # changed it to lidar -> camera
+        # ANGLE should also be pi/2 - angle. 
+
+        camera_angles = (np.pi/2) - raw_angles
+        box_corners = self.box_parametrization_to_corners_np(
+            box_centers[None, ...],
+            raw_sizes.astype(np.float32)[None, ...],
+            raw_angles.astype(np.float32)[None, ...],
+        )
+        box_corners = box_corners.squeeze(0)
 
         ret_dict = {}
-        ret_dict["point_clouds"] = point_cloud.astype(np.float32)
+
+        # ret_dict["point_clouds"] = point_cloud.astype(np.float32)
         ret_dict["gt_box_corners"] = box_corners.astype(np.float32)
-        # ret_dict["gt_box_centers"] = box_centers.astype(np.float32)
-        # ret_dict["gt_box_centers_normalized"] = box_centers_normalized.astype(
-        #     np.float32
-        # )
-        # ret_dict["gt_angle_class_label"] = angle_classes.astype(np.int64)
-        # ret_dict["gt_angle_residual_label"] = angle_residuals.astype(np.float32)
-        # target_bboxes_semcls = np.zeros((self.MAX_NUM_OBJ))
-        # target_bboxes_semcls[0 : instance_bboxes.shape[0]] = [
-        #     self.dataset_config.nyu40id2class[int(x)]
-        #     for x in instance_bboxes[:, -1][0 : instance_bboxes.shape[0]]
-        # ]
-        # ret_dict["gt_box_sem_cls_label"] = target_bboxes_semcls.astype(np.int64)
-        # ret_dict["gt_box_present"] = target_bboxes_mask.astype(np.float32)
-        # ret_dict["scan_idx"] = np.array(idx).astype(np.int64)
-        # ret_dict["pcl_color"] = pcl_color
-        # ret_dict["gt_box_sizes"] = raw_sizes.astype(np.float32)
-        # ret_dict["gt_box_sizes_normalized"] = box_sizes_normalized.astype(np.float32)
-        # ret_dict["gt_box_angles"] = raw_angles.astype(np.float32)
-        # ret_dict["point_cloud_dims_min"] = point_cloud_dims_min.astype(np.float32)
-        # ret_dict["point_cloud_dims_max"] = point_cloud_dims_max.astype(np.float32)
+        ret_dict["gt_box_centers"] = box_centers.astype(np.float32)
+        ret_dict["gt_box_centers_normalized"] = torch.Tensor.numpy(box_centers_normalized).astype(
+            np.float32
+        )
+        target_bboxes_semcls = np.zeros((self.MAX_NUM_OBJ))
+        target_bboxes_semcls[0 : bboxes.shape[0]] = results['gt_labels_3d']  # from 0 to 9
+        ret_dict["gt_box_sem_cls_label"] = target_bboxes_semcls.astype(np.int64)
+        ret_dict["gt_box_present"] = target_bboxes_mask.astype(np.float32)
+        ret_dict["gt_box_sizes"] = raw_sizes.astype(np.float32)
+        ret_dict["gt_box_sizes_normalized"] = box_sizes_normalized.astype(np.float32)
+        ret_dict["gt_box_angles"] = raw_angles.astype(np.float32)
+        ret_dict["gt_angle_class_label"] = angle_classes
+        ret_dict["gt_angle_residual_label"] = angle_residuals
+        ret_dict["point_cloud_dims_min"] = point_cloud_dims_min
+        ret_dict["point_cloud_dims_max"] = point_cloud_dims_max
+
+        results['ret_dict'] = ret_dict
         return results
     def __repr__(self):
         repr_str = self.__class__.__name__

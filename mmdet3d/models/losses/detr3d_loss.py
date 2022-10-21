@@ -56,7 +56,7 @@ class Matcher(nn.Module):
             + self.cost_giou * giou_mat
         )
 
-        final_cost = final_cost.detach().cpu().numpy()
+        final_cost = final_cost.clone().detach().cpu().numpy()
         assignments = []
 
         # auxiliary variables useful for batched loss computation
@@ -352,6 +352,15 @@ class SetCriterion(nn.Module):
                 final_loss += losses[k.replace("_weight", "")]
         return final_loss, losses
 
+
+    # gt_box_present, 
+    # nactual_gt, 
+    # num_boxes, 
+    # num_boxes_replica,
+    # box_corners,
+    # gt_box_corners
+    # gt_box_angles
+    # gt_box_centers_normalized
     def forward(self, outputs, targets):
         nactual_gt = targets["gt_box_present"].sum(axis=1).long()
         num_boxes = torch.clamp(all_reduce_average(nactual_gt.sum()), min=1).item()

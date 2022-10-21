@@ -33,11 +33,15 @@ class DETR3D(SingleStage3DDetector):
 
 
 
-    def forward_train(self, points, img_metas, **kwargs):
-        points_cat = torch.stack(points)
-        feats = self.backbone(points_cat)
-
-        
+    def forward_train(self, points,point_cloud_dims_min,point_cloud_dims_max, ret_dict,img_metas, **kwargs):
+        input = {
+            'point_clouds':torch.stack(points),
+            'point_cloud_dims_min':point_cloud_dims_min,
+            'point_cloud_dims_max':point_cloud_dims_max
+        }
+        query_xyz,point_cloud_dims,box_features = self.backbone(input)
+        outputs = self.bbox_head(query_xyz,point_cloud_dims,box_features)
+        loss = self.bbox_head.loss(outputs,ret_dict)        
         return 
 
 

@@ -82,7 +82,8 @@ model = dict(
 
 
         # dataset cfg original 
-        num_angle_bin = 12 
+        num_angle_bin = 12,
+        decoder_dim = 256
 
 
 

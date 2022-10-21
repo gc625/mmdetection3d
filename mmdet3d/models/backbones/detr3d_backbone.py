@@ -53,7 +53,7 @@ class DETR3D_BACKBONE(nn.Module):
 
         self.pre_encoder = build_preencoder_withargs(preenc_dict)
         self.encoder = build_encoder_withargs(encoder_dict)
-
+        self.num_queries = num_queries
 
 
 
@@ -84,7 +84,7 @@ class DETR3D_BACKBONE(nn.Module):
             hidden_use_bias=True,
         )
         self.decoder = build_decoder_withargs(decoder_dict)
-
+        # self.build_mlp_heads(dataset_config, decoder_dim, mlp_dropout)
 
     
     def get_query_embeddings(self, encoder_xyz, point_cloud_dims):
@@ -128,105 +128,10 @@ class DETR3D_BACKBONE(nn.Module):
             enc_inds = pre_enc_inds
         else:
             # use gather here to ensure that it works for both FPS and random sampling
-            enc_inds = torch.gather(pre_enc_inds, 1, enc_inds)
+            enc_inds = torch.gather(pre_enc_inds.to(torch.int64), 1, enc_inds.to(torch.int64))
         return enc_xyz, enc_features, enc_inds
 
-    def get_box_predictions(self, query_xyz, point_cloud_dims, box_features):
-        """
-        Parameters:
-            query_xyz: batch x nqueries x 3 tensor of query XYZ coords
-            point_cloud_dims: List of [min, max] dims of point cloud
-                              min: batch x 3 tensor of min XYZ coords
-                              max: batch x 3 tensor of max XYZ coords
-            box_features: num_layers x num_queries x batch x channel
-        """
-        # box_features change to (num_layers x batch) x channel x num_queries
-        box_features = box_features.permute(0, 2, 3, 1)
-        num_layers, batch, channel, num_queries = (
-            box_features.shape[0],
-            box_features.shape[1],
-            box_features.shape[2],
-            box_features.shape[3],
-        )
-        box_features = box_features.reshape(num_layers * batch, channel, num_queries)
-
-        # mlp head outputs are (num_layers x batch) x noutput x nqueries, so transpose last two dims
-        cls_logits = self.mlp_heads["sem_cls_head"](box_features).transpose(1, 2)
-        center_offset = (
-            self.mlp_heads["center_head"](box_features).sigmoid().transpose(1, 2) - 0.5
-        )
-        size_normalized = (
-            self.mlp_heads["size_head"](box_features).sigmoid().transpose(1, 2)
-        )
-        angle_logits = self.mlp_heads["angle_cls_head"](box_features).transpose(1, 2)
-        angle_residual_normalized = self.mlp_heads["angle_residual_head"](
-            box_features
-        ).transpose(1, 2)
-
-        # reshape outputs to num_layers x batch x nqueries x noutput
-        cls_logits = cls_logits.reshape(num_layers, batch, num_queries, -1)
-        center_offset = center_offset.reshape(num_layers, batch, num_queries, -1)
-        size_normalized = size_normalized.reshape(num_layers, batch, num_queries, -1)
-        angle_logits = angle_logits.reshape(num_layers, batch, num_queries, -1)
-        angle_residual_normalized = angle_residual_normalized.reshape(
-            num_layers, batch, num_queries, -1
-        )
-        angle_residual = angle_residual_normalized * (
-            np.pi / angle_residual_normalized.shape[-1]
-        )
-
-        outputs = []
-        for l in range(num_layers):
-            # box processor converts outputs so we can get a 3D bounding box
-            (
-                center_normalized,
-                center_unnormalized,
-            ) = self.box_processor.compute_predicted_center(
-                center_offset[l], query_xyz, point_cloud_dims
-            )
-            angle_continuous = self.box_processor.compute_predicted_angle(
-                angle_logits[l], angle_residual[l]
-            )
-            size_unnormalized = self.box_processor.compute_predicted_size(
-                size_normalized[l], point_cloud_dims
-            )
-            box_corners = self.box_processor.box_parametrization_to_corners(
-                center_unnormalized, size_unnormalized, angle_continuous
-            )
-
-            # below are not used in computing loss (only for matching/mAP eval)
-            # we compute them with no_grad() so that distributed training does not complain about unused variables
-            with torch.no_grad():
-                (
-                    semcls_prob,
-                    objectness_prob,
-                ) = self.box_processor.compute_objectness_and_cls_prob(cls_logits[l])
-
-            box_prediction = {
-                "sem_cls_logits": cls_logits[l],
-                "center_normalized": center_normalized.contiguous(),
-                "center_unnormalized": center_unnormalized,
-                "size_normalized": size_normalized[l],
-                "size_unnormalized": size_unnormalized,
-                "angle_logits": angle_logits[l],
-                "angle_residual": angle_residual[l],
-                "angle_residual_normalized": angle_residual_normalized[l],
-                "angle_continuous": angle_continuous,
-                "objectness_prob": objectness_prob,
-                "sem_cls_prob": semcls_prob,
-                "box_corners": box_corners,
-            }
-            outputs.append(box_prediction)
-
-        # intermediate decoder layer outputs are only used during training
-        aux_outputs = outputs[:-1]
-        outputs = outputs[-1]
-
-        return {
-            "outputs": outputs,  # output from last layer of decoder
-            "aux_outputs": aux_outputs,  # output from intermediate layers of decoder
-        }
-
+    
     def forward(self, inputs, encoder_only=False):
         point_clouds = inputs["point_clouds"]
 
@@ -257,6 +162,8 @@ class DETR3D_BACKBONE(nn.Module):
             tgt, enc_features, query_pos=query_embed, pos=enc_pos
         )[0]
 
+        return query_xyz,point_cloud_dims,box_features
+
         box_predictions = self.get_box_predictions(
             query_xyz, point_cloud_dims, box_features
         )
@@ -279,7 +186,7 @@ def build_preencoder_withargs(args):
     enc_dim = args['enc_dim']
     preenc_npoints = args['preenc_npoints']
 
-    mlp_dims = [3 * int(use_color), 64, 128, enc_dim]
+    mlp_dims = [3 * int(use_color)+1, 64, 128, enc_dim]
     preencoder = PointnetSAModuleVotes(
         radius=0.2,
         nsample=64,

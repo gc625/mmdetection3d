@@ -37,24 +37,26 @@ train_pipeline = [
         with_bbox_3d=True,
         with_label_3d=True,
         file_client_args=file_client_args),
-    dict(type='ObjectSample', db_sampler=db_sampler),
-    dict(
-        type='ObjectNoise',
-        num_try=100,
-        translation_std=[1.0, 1.0, 0.5],
-        global_rot_range=[0.0, 0.0],
-        rot_range=[-0.78539816, 0.78539816]),
-    dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
-    dict(
-        type='GlobalRotScaleTrans',
-        rot_range=[-0.78539816, 0.78539816],
-        scale_ratio_range=[0.95, 1.05]),
+    # dict(type='ObjectSample', db_sampler=db_sampler),
+    # dict(
+    #     type='ObjectNoise',
+    #     num_try=100,
+    #     translation_std=[1.0, 1.0, 0.5],
+    #     global_rot_range=[0.0, 0.0],
+    #     rot_range=[-0.78539816, 0.78539816]),
+    # dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
+    # dict(
+    #     type='GlobalRotScaleTrans',
+    #     rot_range=[-0.78539816, 0.78539816],
+    #     scale_ratio_range=[0.95, 1.05]),
     dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='PointShuffle'),
-    # dict(type='Get3detrLabels'),
+    dict(type='PointSample', num_points=16384),
+    dict(type='Get3detrLabels',max_num_obj=50,num_angle_bin=12),
+    dict(type='GetPointcloudMinMax'),
     dict(type='DefaultFormatBundle3D', class_names=class_names),
-    dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
+    dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d','point_cloud_dims_min','point_cloud_dims_max','ret_dict'])
 ]
 test_pipeline = [
     dict(
@@ -102,7 +104,7 @@ eval_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=1,
+    samples_per_gpu=2,
     workers_per_gpu=0,
     train=dict(
         type='RepeatDataset',

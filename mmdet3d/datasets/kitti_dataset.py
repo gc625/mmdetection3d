@@ -355,8 +355,8 @@ class KittiDataset(Custom3DDataset):
         Returns:
             dict[str, float]: Results of each evaluation metric.
         """
-        import ipdb 
-        ipdb.set_trace()
+        # import ipdb 
+        # ipdb.set_trace()
         result_files, tmp_dir = self.format_results(results, pklfile_prefix)
         from mmdet3d.core.evaluation import kitti_eval
         gt_annos = [info['annos'] for info in self.data_infos]
