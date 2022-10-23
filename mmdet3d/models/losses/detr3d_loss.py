@@ -195,8 +195,7 @@ class SetCriterion(nn.Module):
             # angle_reg_loss = huber_loss(p_angle_resid.flatten() - t_angle_resid.flatten()).sum()
 
             gt_angle_label = torch.gather(
-                gt_angle_label, 1, assignments["per_prop_gt_inds"]
-            )
+                gt_angle_label, 1, assignments["per_prop_gt_inds"]).to(torch.long)
             angle_cls_loss = F.cross_entropy(
                 angle_logits.transpose(2, 1), gt_angle_label, reduction="none"
             )
