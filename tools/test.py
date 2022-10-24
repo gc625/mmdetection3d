@@ -178,14 +178,14 @@ def main():
 
     # in case the test dataset is concatenated
     if isinstance(cfg.data.test, dict):
-        cfg.data.test.test_mode = True
+        cfg.data.test.test_mode = False
         if cfg.data.test_dataloader.get('samples_per_gpu', 1) > 1:
             # Replace 'ImageToTensor' to 'DefaultFormatBundle'
             cfg.data.test.pipeline = replace_ImageToTensor(
                 cfg.data.test.pipeline)
     elif isinstance(cfg.data.test, list):
         for ds_cfg in cfg.data.test:
-            ds_cfg.test_mode = True
+            ds_cfg.test_mode = False
         if cfg.data.test_dataloader.get('samples_per_gpu', 1) > 1:
             for ds_cfg in cfg.data.test:
                 ds_cfg.pipeline = replace_ImageToTensor(ds_cfg.pipeline)

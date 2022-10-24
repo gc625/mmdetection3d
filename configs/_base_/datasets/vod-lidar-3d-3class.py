@@ -98,14 +98,35 @@ eval_pipeline = [
         use_dim=4,
         file_client_args=file_client_args),
     dict(
-        type='DefaultFormatBundle3D',
-        class_names=class_names,
-        with_label=False),
-    dict(type='Collect3D', keys=['points'])
+        type='LoadAnnotations3D',
+        with_bbox_3d=True,
+        with_label_3d=True,
+        file_client_args=file_client_args),
+    dict(type='ObjectSample', db_sampler=db_sampler),
+    dict(type='ObjectNameFilter',classes=['Pedestrian', 'Cyclist', 'Car']),
+    dict(
+        type='ObjectNoise',
+        num_try=100,
+        translation_std=[1.0, 1.0, 0.5],
+        global_rot_range=[0.0, 0.0],
+        rot_range=[-0.78539816, 0.78539816]),
+    dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
+    dict(
+        type='GlobalRotScaleTrans',
+        rot_range=[-0.78539816, 0.78539816],
+        scale_ratio_range=[0.95, 1.05]),
+    dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
+    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
+    dict(type='PointShuffle'),
+    dict(type='PointSample', num_points=16384),
+    dict(type='Get3detrLabels',max_num_obj=50,num_angle_bin=12),
+    dict(type='GetPointcloudMinMax'),
+    dict(type='DefaultFormatBundle3D', class_names=class_names),
+    dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d','point_cloud_dims_min','point_cloud_dims_max','ret_dict'])
 ]
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=16,
     workers_per_gpu=0,
     train=dict(
         type='RepeatDataset',
@@ -130,10 +151,10 @@ data = dict(
         ann_file=data_root + 'kitti_infos_val.pkl',
         split='training',
         pts_prefix='velodyne_reduced',
-        pipeline=test_pipeline,
+        pipeline=eval_pipeline,
         modality=input_modality,
         classes=class_names,
-        test_mode=True,
+        test_mode=False,
         box_type_3d='LiDAR',
         file_client_args=file_client_args),
     test=dict(
@@ -142,10 +163,10 @@ data = dict(
         ann_file=data_root + 'kitti_infos_val.pkl',
         split='training',
         pts_prefix='velodyne_reduced',
-        pipeline=test_pipeline,
+        pipeline=eval_pipeline,
         modality=input_modality,
         classes=class_names,
-        test_mode=True,
+        test_mode=False,
         box_type_3d='LiDAR',
         file_client_args=file_client_args))
 

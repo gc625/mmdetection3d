@@ -12,7 +12,7 @@ class SharedMLP(nn.Sequential):
             args: List[int],
             *,
             bn: bool = False,
-            activation=nn.ReLU(inplace=True),
+            activation=nn.ReLU(inplace=False),
             preact: bool = False,
             first: bool = False,
             name: str = ""
