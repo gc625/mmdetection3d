@@ -75,13 +75,13 @@ optimizer = dict(type='AdamW', lr=lr, weight_decay=0)
 # max_norm=35 is slightly better than 10 for PointPillars in the earlier
 # development of the codebase thus we keep the setting. But we does not
 # specifically tune this parameter.
-optimizer_config = dict(grad_clip=dict(max_norm=10, norm_type=2))
+optimizer_config = dict(grad_clip=dict(max_norm=20, norm_type=2))
 lr_config = dict(policy='step', warmup=None, step=[45, 60])
 
-runner = dict(type='EpochBasedRunner', max_epochs=80)
+runner = dict(type='EpochBasedRunner', max_epochs=40)
 
 # Use evaluation interval=2 reduce the number of evaluation timese
-evaluation = dict(interval=1)
+evaluation = dict(interval=40)
 
 
 #    parser.add_argument("--base_lr", default=5e-4, type=float)

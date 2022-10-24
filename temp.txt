@@ -1,501 +1,57 @@
-2022-10-16 23:16:18,673 - mmdet - INFO - Model:
-VoteNet(
-  (backbone): Pointformer(
-    (SA_modules): ModuleList(
-      (0): BasicDownBlock(
-        (local_chunk): LocalTransformer(
-          (sampler): PointsSampler(
-            (samplers): ModuleList(
-              (0): DFPSSampler()
-            )
-          )
-          (grouper): QueryAndGroup()
-          (pe): Sequential(
-            (0): ConvModule(
-              (conv): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1), bias=False)
-              (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-              (activate): ReLU(inplace=True)
-            )
-            (1): ConvModule(
-              (conv): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-            )
-          )
-          (chunk): TransformerEncoder(
-            (layers): ModuleList(
-              (0): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
-                )
-                (linear1): Linear(in_features=64, out_features=128, bias=True)
-                (dropout): Dropout(p=0.0, inplace=True)
-                (linear2): Linear(in_features=128, out_features=64, bias=True)
-                (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.0, inplace=True)
-                (dropout2): Dropout(p=0.0, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-              (1): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
-                )
-                (linear1): Linear(in_features=64, out_features=128, bias=True)
-                (dropout): Dropout(p=0.0, inplace=True)
-                (linear2): Linear(in_features=128, out_features=64, bias=True)
-                (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.0, inplace=True)
-                (dropout2): Dropout(p=0.0, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-            )
-          )
-          (fc): ConvModule(
-            (conv): Conv2d(64, 64, kernel_size=(1, 1), stride=(1, 1))
-          )
-        )
-        (global_chunk): GlobalTransformer(
-          (pe): Sequential(
-            (0): ConvModule(
-              (conv): Conv2d(3, 32, kernel_size=(1, 1), stride=(1, 1), bias=False)
-              (bn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-              (activate): ReLU(inplace=True)
-            )
-            (1): ConvModule(
-              (conv): Conv2d(32, 64, kernel_size=(1, 1), stride=(1, 1))
-            )
-          )
-          (chunk): TransformerEncoder(
-            (layers): ModuleList(
-              (0): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
-                )
-                (linear1): Linear(in_features=64, out_features=128, bias=True)
-                (dropout): Dropout(p=0.2, inplace=True)
-                (linear2): Linear(in_features=128, out_features=64, bias=True)
-                (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.2, inplace=True)
-                (dropout2): Dropout(p=0.2, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-              (1): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
-                )
-                (linear1): Linear(in_features=64, out_features=128, bias=True)
-                (dropout): Dropout(p=0.2, inplace=True)
-                (linear2): Linear(in_features=128, out_features=64, bias=True)
-                (norm1): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.2, inplace=True)
-                (dropout2): Dropout(p=0.2, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-            )
-          )
-          (fc): ConvModule(
-            (conv): Conv2d(64, 128, kernel_size=(1, 1), stride=(1, 1))
-          )
-        )
-      )
-      (1): BasicDownBlock(
-        (local_chunk): LocalTransformer(
-          (sampler): PointsSampler(
-            (samplers): ModuleList(
-              (0): DFPSSampler()
-            )
-          )
-          (grouper): QueryAndGroup()
-          (pe): Sequential(
-            (0): ConvModule(
-              (conv): Conv2d(3, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
-              (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-              (activate): ReLU(inplace=True)
-            )
-            (1): ConvModule(
-              (conv): Conv2d(64, 128, kernel_size=(1, 1), stride=(1, 1))
-            )
-          )
-          (chunk): TransformerEncoder(
-            (layers): ModuleList(
-              (0): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)
-                )
-                (linear1): Linear(in_features=128, out_features=256, bias=True)
-                (dropout): Dropout(p=0.0, inplace=True)
-                (linear2): Linear(in_features=256, out_features=128, bias=True)
-                (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.0, inplace=True)
-                (dropout2): Dropout(p=0.0, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-              (1): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)
-                )
-                (linear1): Linear(in_features=128, out_features=256, bias=True)
-                (dropout): Dropout(p=0.0, inplace=True)
-                (linear2): Linear(in_features=256, out_features=128, bias=True)
-                (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.0, inplace=True)
-                (dropout2): Dropout(p=0.0, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-            )
-          )
-          (fc): ConvModule(
-            (conv): Conv2d(128, 128, kernel_size=(1, 1), stride=(1, 1))
-          )
-        )
-        (global_chunk): GlobalTransformer(
-          (pe): Sequential(
-            (0): ConvModule(
-              (conv): Conv2d(3, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
-              (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-              (activate): ReLU(inplace=True)
-            )
-            (1): ConvModule(
-              (conv): Conv2d(64, 128, kernel_size=(1, 1), stride=(1, 1))
-            )
-          )
-          (chunk): TransformerEncoder(
-            (layers): ModuleList(
-              (0): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)
-                )
-                (linear1): Linear(in_features=128, out_features=256, bias=True)
-                (dropout): Dropout(p=0.2, inplace=True)
-                (linear2): Linear(in_features=256, out_features=128, bias=True)
-                (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.2, inplace=True)
-                (dropout2): Dropout(p=0.2, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-              (1): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)
-                )
-                (linear1): Linear(in_features=128, out_features=256, bias=True)
-                (dropout): Dropout(p=0.2, inplace=True)
-                (linear2): Linear(in_features=256, out_features=128, bias=True)
-                (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.2, inplace=True)
-                (dropout2): Dropout(p=0.2, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-            )
-          )
-          (fc): ConvModule(
-            (conv): Conv2d(128, 256, kernel_size=(1, 1), stride=(1, 1))
-          )
-        )
-      )
-      (2): BasicDownBlock(
-        (local_chunk): LocalTransformer(
-          (sampler): PointsSampler(
-            (samplers): ModuleList(
-              (0): DFPSSampler()
-            )
-          )
-          (grouper): QueryAndGroup()
-          (pe): Sequential(
-            (0): ConvModule(
-              (conv): Conv2d(3, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
-              (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-              (activate): ReLU(inplace=True)
-            )
-            (1): ConvModule(
-              (conv): Conv2d(128, 256, kernel_size=(1, 1), stride=(1, 1))
-            )
-          )
-          (chunk): TransformerEncoder(
-            (layers): ModuleList(
-              (0): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=256, out_features=256, bias=True)
-                )
-                (linear1): Linear(in_features=256, out_features=512, bias=True)
-                (dropout): Dropout(p=0.0, inplace=True)
-                (linear2): Linear(in_features=512, out_features=256, bias=True)
-                (norm1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.0, inplace=True)
-                (dropout2): Dropout(p=0.0, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-              (1): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=256, out_features=256, bias=True)
-                )
-                (linear1): Linear(in_features=256, out_features=512, bias=True)
-                (dropout): Dropout(p=0.0, inplace=True)
-                (linear2): Linear(in_features=512, out_features=256, bias=True)
-                (norm1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.0, inplace=True)
-                (dropout2): Dropout(p=0.0, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-            )
-          )
-          (fc): ConvModule(
-            (conv): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1))
-          )
-        )
-        (global_chunk): GlobalTransformer(
-          (pe): Sequential(
-            (0): ConvModule(
-              (conv): Conv2d(3, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
-              (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-              (activate): ReLU(inplace=True)
-            )
-            (1): ConvModule(
-              (conv): Conv2d(128, 256, kernel_size=(1, 1), stride=(1, 1))
-            )
-          )
-          (chunk): TransformerEncoder(
-            (layers): ModuleList(
-              (0): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=256, out_features=256, bias=True)
-                )
-                (linear1): Linear(in_features=256, out_features=512, bias=True)
-                (dropout): Dropout(p=0.2, inplace=True)
-                (linear2): Linear(in_features=512, out_features=256, bias=True)
-                (norm1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.2, inplace=True)
-                (dropout2): Dropout(p=0.2, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-              (1): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=256, out_features=256, bias=True)
-                )
-                (linear1): Linear(in_features=256, out_features=512, bias=True)
-                (dropout): Dropout(p=0.2, inplace=True)
-                (linear2): Linear(in_features=512, out_features=256, bias=True)
-                (norm1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.2, inplace=True)
-                (dropout2): Dropout(p=0.2, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-            )
-          )
-          (fc): ConvModule(
-            (conv): Conv2d(256, 512, kernel_size=(1, 1), stride=(1, 1))
-          )
-        )
-      )
-      (3): BasicDownBlock(
-        (local_chunk): LocalTransformer(
-          (sampler): PointsSampler(
-            (samplers): ModuleList(
-              (0): DFPSSampler()
-            )
-          )
-          (grouper): QueryAndGroup()
-          (pe): Sequential(
-            (0): ConvModule(
-              (conv): Conv2d(3, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
-              (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-              (activate): ReLU(inplace=True)
-            )
-            (1): ConvModule(
-              (conv): Conv2d(256, 512, kernel_size=(1, 1), stride=(1, 1))
-            )
-          )
-          (chunk): TransformerEncoder(
-            (layers): ModuleList(
-              (0): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
-                )
-                (linear1): Linear(in_features=512, out_features=1024, bias=True)
-                (dropout): Dropout(p=0.0, inplace=True)
-                (linear2): Linear(in_features=1024, out_features=512, bias=True)
-                (norm1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.0, inplace=True)
-                (dropout2): Dropout(p=0.0, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-              (1): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
-                )
-                (linear1): Linear(in_features=512, out_features=1024, bias=True)
-                (dropout): Dropout(p=0.0, inplace=True)
-                (linear2): Linear(in_features=1024, out_features=512, bias=True)
-                (norm1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.0, inplace=True)
-                (dropout2): Dropout(p=0.0, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-            )
-          )
-          (fc): ConvModule(
-            (conv): Conv2d(512, 512, kernel_size=(1, 1), stride=(1, 1))
-          )
-        )
-        (global_chunk): GlobalTransformer(
-          (pe): Sequential(
-            (0): ConvModule(
-              (conv): Conv2d(3, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
-              (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-              (activate): ReLU(inplace=True)
-            )
-            (1): ConvModule(
-              (conv): Conv2d(256, 512, kernel_size=(1, 1), stride=(1, 1))
-            )
-          )
-          (chunk): TransformerEncoder(
-            (layers): ModuleList(
-              (0): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
-                )
-                (linear1): Linear(in_features=512, out_features=1024, bias=True)
-                (dropout): Dropout(p=0.2, inplace=True)
-                (linear2): Linear(in_features=1024, out_features=512, bias=True)
-                (norm1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.2, inplace=True)
-                (dropout2): Dropout(p=0.2, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-              (1): TransformerEncoderLayerPreNorm(
-                (self_attn): MultiheadAttention(
-                  (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
-                )
-                (linear1): Linear(in_features=512, out_features=1024, bias=True)
-                (dropout): Dropout(p=0.2, inplace=True)
-                (linear2): Linear(in_features=1024, out_features=512, bias=True)
-                (norm1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
-                (norm2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
-                (dropout1): Dropout(p=0.2, inplace=True)
-                (dropout2): Dropout(p=0.2, inplace=True)
-                (activation): ReLU(inplace=True)
-              )
-            )
-          )
-          (fc): ConvModule(
-            (conv): Conv2d(512, 512, kernel_size=(1, 1), stride=(1, 1))
-          )
-        )
-      )
-    )
-    (feature_conv): ConvModule(
-      (conv): Conv2d(1, 64, kernel_size=(1, 1), stride=(1, 1))
-    )
-    (FP_modules): ModuleList(
-      (0): PointFPModule(
-        (mlps): Sequential(
-          (layer0): ConvModule(
-            (conv): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
-            (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            (activate): ReLU(inplace=True)
-          )
-          (layer1): ConvModule(
-            (conv): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
-            (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            (activate): ReLU(inplace=True)
-          )
-        )
-      )
-      (1): PointFPModule(
-        (mlps): Sequential(
-          (layer0): ConvModule(
-            (conv): Conv2d(512, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
-            (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            (activate): ReLU(inplace=True)
-          )
-          (layer1): ConvModule(
-            (conv): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
-            (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            (activate): ReLU(inplace=True)
-          )
-        )
-      )
-    )
-  )
-  (bbox_head): VoteHead(
-    (objectness_loss): CrossEntropyLoss(avg_non_ignore=False)
-    (center_loss): ChamferDistance()
-    (dir_res_loss): SmoothL1Loss()
-    (dir_class_loss): CrossEntropyLoss(avg_non_ignore=False)
-    (size_res_loss): SmoothL1Loss()
-    (size_class_loss): CrossEntropyLoss(avg_non_ignore=False)
-    (semantic_loss): CrossEntropyLoss(avg_non_ignore=False)
-    (vote_module): VoteModule(
-      (vote_loss): ChamferDistance()
-      (vote_conv): Sequential(
-        (0): ConvModule(
-          (conv): Conv1d(256, 256, kernel_size=(1,), stride=(1,))
-          (bn): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-          (activate): ReLU(inplace=True)
-        )
-        (1): ConvModule(
-          (conv): Conv1d(256, 256, kernel_size=(1,), stride=(1,))
-          (bn): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-          (activate): ReLU(inplace=True)
-        )
-      )
-      (conv_out): Conv1d(256, 259, kernel_size=(1,), stride=(1,))
-    )
-    (vote_aggregation): PointSAModule(
-      (groupers): ModuleList(
-        (0): QueryAndGroup()
-      )
-      (mlps): ModuleList(
-        (0): Sequential(
-          (layer0): ConvModule(
-            (conv): Conv2d(259, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
-            (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            (activate): ReLU(inplace=True)
-          )
-          (layer1): ConvModule(
-            (conv): Conv2d(128, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
-            (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            (activate): ReLU(inplace=True)
-          )
-          (layer2): ConvModule(
-            (conv): Conv2d(128, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
-            (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-            (activate): ReLU(inplace=True)
-          )
-        )
-      )
-      (points_sampler): PointsSampler(
-        (samplers): ModuleList(
-          (0): DFPSSampler()
-        )
-      )
-    )
-    (conv_pred): BaseConvBboxHead(
-      (shared_convs): Sequential(
-        (layer0): ConvModule(
-          (conv): Conv1d(128, 128, kernel_size=(1,), stride=(1,))
-          (bn): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-          (activate): ReLU(inplace=True)
-        )
-        (layer1): ConvModule(
-          (conv): Conv1d(128, 128, kernel_size=(1,), stride=(1,))
-          (bn): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-          (activate): ReLU(inplace=True)
-        )
-      )
-      (conv_cls): Conv1d(128, 20, kernel_size=(1,), stride=(1,))
-      (conv_reg): Conv1d(128, 123, kernel_size=(1,), stride=(1,))
-    )
-  )
+loss_sem_cls: 0.9302, 
+loss_angle_cls: 0.2472, 
+loss_angle_reg: 0.1015, 
+loss_center: 0.9298, 
+loss_size: 0.3266, 
+loss_cardinality: 27.8950, 
+
+loss_sem_cls_0: 0.9333, 
+loss_angle_cls_0: 0.2530, 
+loss_angle_reg_0: 0.1384, 
+loss_center_0: 1.0447, 
+loss_size_0: 0.3989, 
+loss_cardinality_0: 31.4000, 
+
+loss_sem_cls_1: 0.9239, 
+loss_angle_cls_1: 0.2481, 
+loss_angle_reg_1: 0.1035, 
+loss_center_1: 0.9559, 
+loss_size_1: 0.3323, 
+loss_cardinality_1: 26.9062, 
+
+loss_sem_cls_2: 0.9246, 
+loss_angle_cls_2: 0.2476, 
+loss_angle_reg_2: 0.0990, 
+loss_center_2: 0.9395, 
+loss_size_2: 0.3288, 
+loss_cardinality_2: 26.9850, 
+
+loss_sem_cls_3: 0.9275, 
+loss_angle_cls_3: 0.2469, 
+loss_angle_reg_3: 0.0982, 
+loss_center_3: 0.9358, 
+loss_size_3: 0.3293, 
+loss_cardinality_3: 26.7688, 
+
+loss_sem_cls_4: 0.9296, 
+loss_angle_cls_4: 0.2463, 
+loss_angle_reg_4: 0.0954, 
+loss_center_4: 0.9401, 
+loss_size_4: 0.3385,
+loss_cardinality_4: 27.6462, 
+
+loss_sem_cls_5: 0.9281, 
+loss_angle_cls_5: 0.2467, 
+loss_angle_reg_5: 0.0966, 
+loss_center_5: 0.9519, 
+loss_size_5: 0.3345, 
+loss_cardinality_5: 27.7325, 
+
+loss_sem_cls_6: 0.9315, 
+loss_angle_cls_6: 0.2469, 
+loss_angle_reg_6: 0.0984, 
+loss_center_6: 0.9196, 
+loss_size_6: 0.3226, 
+loss_cardinality_6: 28.7787, 
+
+loss: 244.6835,
