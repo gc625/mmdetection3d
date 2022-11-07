@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from mmcv import is_tuple_of
 from mmcv.utils import build_from_cfg
-
+import open3d as o3d
 from mmdet3d.core import VoxelGenerator
 from mmdet3d.core.bbox import (CameraInstance3DBoxes, DepthInstance3DBoxes,
                                LiDARInstance3DBoxes, box_np_ops)
@@ -14,7 +14,7 @@ from mmdet3d.datasets.pipelines.compose import Compose
 from mmdet.datasets.pipelines import RandomCrop, RandomFlip, Rotate
 from ..builder import OBJECTSAMPLERS, PIPELINES
 from .data_augment_utils import noise_per_object_v3_
-
+import pickle
 from mmdet3d.ops.detr3d_utils.box_util import flip_axis_to_camera_np, flip_axis_to_camera_tensor, get_3d_box_batch_np, get_3d_box_batch_tensor
 from mmdet3d.ops.detr3d_utils.pc_util import scale_points, shift_scale_points, rotz
 @PIPELINES.register_module()
@@ -1603,6 +1603,8 @@ class VoxelBasedPointSampler(object):
         return repr_str
 
 
+
+
 @PIPELINES.register_module()
 class AffineResize(object):
     """Get the affine transform matrices to the target size.
@@ -1881,20 +1883,12 @@ class GetPointcloudMinMax(object):
         repr_str += f'point_cloud_dims_max={self.max_range}) '
         return repr_str
 
-    
 
 
 @PIPELINES.register_module()
-class Get3detrLabels(object):
+class Get3detrData(object):
 
 
-    def __init__(self,max_num_obj,num_angle_bin):
-        self.num_angle_bin = num_angle_bin
-        self.MAX_NUM_OBJ = max_num_obj
-        self.center_normalizing_range = [
-            np.zeros((1, 3), dtype=np.float32),
-            np.ones((1, 3), dtype=np.float32),
-        ]
 
     def flip_lidar_axis_to_camera_np(self,pc):
         pc2 = pc.copy() 
@@ -1969,13 +1963,123 @@ class Get3detrLabels(object):
         corners_3d[2, :] += np.array(center[2])
         return np.transpose(corners_3d)
 
+    def __call__(self, results):
+        point_cloud = results['points'].tensor
+
+
+       
+
+
+        
+        point_cloud_dims_min = point_cloud.min(axis=0)[0][:3]
+        point_cloud_dims_max = point_cloud.max(axis=0)[0][:3]
+
+
+        ret_dict = {}
+        ret_dict['point_clooud_dims_min'] = point_cloud_dims_min                       
+    
+        ret_dict['point_clooud_dims_max'] = point_cloud_dims_max
+
+        results['ret_dict'] = ret_dict
+        return results
+
+@PIPELINES.register_module()
+class Get3detrLabels(object):
+
+
+    def __init__(self,max_num_obj,num_angle_bin):
+        self.num_angle_bin = num_angle_bin
+        self.MAX_NUM_OBJ = max_num_obj
+        self.center_normalizing_range = [
+            np.zeros((1, 3), dtype=np.float32),
+            np.ones((1, 3), dtype=np.float32),
+        ]
+
+    def flip_lidar_axis_to_camera_np(self,pc):
+        pc2 = pc.copy() 
+        pc2[..., [0, 1, 2]] = pc2[..., [1, 2, 0]]  # cam X,Y,Z = lidar -Y,-Z,X
+        pc2[..., 1] *= -1
+        pc2[..., 0] *= -1
+        return pc2
+
+    def box_parametrization_to_corners_np(self, box_center_unnorm, box_size, box_angle):
+        # box_center_upright = self.flip_lidar_axis_to_camera_np(box_center_unnorm)
+        boxes = get_3d_box_batch_np(box_size, box_angle, box_center_unnorm)
+        return boxes
+
+    def angle2class(self, angle):
+        """Convert continuous angle to discrete class
+        [optinal] also small regression number from
+        class center angle to current angle.
+
+        angle is from 0-2pi (or -pi~pi), class center at 0, 1*(2pi/N), 2*(2pi/N) ...  (N-1)*(2pi/N)
+        returns class [0,1,...,N-1] and a residual number such that
+            class*(2pi/N) + number = angle
+        """
+        num_class = self.num_angle_bin
+        angle = angle % (2 * np.pi)
+        assert angle >= 0 and angle <= 2 * np.pi
+        angle_per_class = 2 * np.pi / float(num_class)
+        shifted_angle = (angle + angle_per_class / 2) % (2 * np.pi)
+        class_id = int(shifted_angle / angle_per_class)
+        residual_angle = shifted_angle - (
+            class_id * angle_per_class + angle_per_class / 2
+        )
+        return class_id, residual_angle
+
+    def class2angle(self, pred_cls, residual, to_label_format=True):
+        """Inverse function to angle2class"""
+        num_class = self.num_angle_bin
+        angle_per_class = 2 * np.pi / float(num_class)
+        angle_center = pred_cls * angle_per_class
+        angle = angle_center + residual
+        if to_label_format and angle > np.pi:
+            angle = angle - 2 * np.pi
+        return angle
+
+    def class2angle_batch(self, pred_cls, residual, to_label_format=True):
+        num_class = self.num_angle_bin
+        angle_per_class = 2 * np.pi / float(num_class)
+        angle_center = pred_cls * angle_per_class
+        angle = angle_center + residual
+        if to_label_format:
+            mask = angle > np.pi
+            angle[mask] = angle[mask] - 2 * np.pi
+        return angle
+
+    def class2anglebatch_tensor(self, pred_cls, residual, to_label_format=True):
+        return self.class2angle_batch(pred_cls, residual, to_label_format)
+
+    def box_parametrization_to_corners(self, box_center_unnorm, box_size, box_angle):
+        box_center_upright = flip_axis_to_camera_tensor(box_center_unnorm)
+        boxes = get_3d_box_batch_tensor(box_size, box_angle, box_center_upright)
+        return boxes
+
+    def my_compute_box_3d(self, center, size, heading_angle):
+        # TODO: CHECK IF THIS IS CORRECT????? 
+        R = rotz(-1 * heading_angle)
+        l, w, h = size
+        x_corners = [-l/2, l/2, l/2, -l/2, -l/2, l/2, l/2, -l/2]
+        y_corners = [w/2, w/2, -w/2, -w/2, w/2, w/2, -w/2, -w/2]
+        z_corners = [h/2, h/2, h/2, h/2, -h/2, -h/2, -h/2, -h/2]
+
+
+
+
+        corners_3d = np.dot(R, np.vstack([x_corners, y_corners, z_corners]))
+        corners_3d[0, :] += np.array(center[0])
+        corners_3d[1, :] += np.array(center[1])
+        corners_3d[2, :] += np.array(center[2])
+        return np.transpose(corners_3d)
+
     
     def __call__(self, results):
         
         # getting points and gt_bboxes from mmdetect3d loader
-        bboxes = results['gt_bboxes_3d'].tensor 
+        bboxes = results['gt_bboxes_3d'].tensor
         point_cloud = results['points'].tensor
-
+        bboxes_gravity_center = results['gt_bboxes_3d'].gravity_center.numpy()
+        bboxes_corners = results['gt_bboxes_3d'].corners.numpy()
 
         # DETR3D vars
         angle_classes = np.zeros((self.MAX_NUM_OBJ,), dtype=np.float32)
@@ -1993,15 +2097,26 @@ class Get3detrLabels(object):
         target_bboxes_mask[0 : bboxes.shape[0]] = 1
         for i in range(bboxes.shape[0]):
             bbox = bboxes[i]
-            raw_angles[i] = bbox[6] % 2 * np.pi
-            box3d_size = bbox[3:6] * 2
+            raw_angles[i] = bbox[6] 
+            box3d_size = bbox[3:6] 
+            # box3d_size = bbox[3:6] * 2
             raw_sizes[i, :] = box3d_size
             angle_class, angle_residual = self.angle2class(bbox[6])
             angle_classes[i] = angle_class
             angle_residuals[i] = angle_residual
+            # corners_3d = self.my_compute_box_3d(
+            #     bbox[0:3], bbox[3:6], bbox[6]
+            # )
+
             corners_3d = self.my_compute_box_3d(
-                bbox[0:3], bbox[3:6], bbox[6]
+                bboxes_gravity_center[i],
+                bbox[3:6],
+                bbox[6]
             )
+
+            # ! might not be in the same order 
+            # corners_3d = bboxes_corners[i]
+
             xmin = np.min(corners_3d[:, 0])
             ymin = np.min(corners_3d[:, 1])
             zmin = np.min(corners_3d[:, 2])
@@ -2018,6 +2133,9 @@ class Get3detrLabels(object):
                     zmax - zmin,
                 ]
             )
+
+
+
             target_bboxes[i, :] = target_bbox
 
         point_cloud_dims_min = point_cloud.min(axis=0)[0][:3]
@@ -2031,6 +2149,7 @@ class Get3detrLabels(object):
         box_sizes_normalized = torch.Tensor.numpy(box_sizes_normalized).astype(np.float32).squeeze(0)
 
         box_centers = target_bboxes.astype(np.float32)[:, 0:3]
+        # JUST LIDAR
         box_centers_normalized = shift_scale_points(
             torch.from_numpy(box_centers[None, ...]),
             src_range= torch.stack([
@@ -2042,11 +2161,15 @@ class Get3detrLabels(object):
         box_centers_normalized = box_centers_normalized.squeeze(0)
         box_centers_normalized = box_centers_normalized * target_bboxes_mask[..., None]
 
+
+
+
+
         # this is sus, originally its depth coords -> camera
         # changed it to lidar -> camera
         # ANGLE should also be pi/2 - angle. 
 
-        camera_angles = (np.pi/2) - raw_angles
+        # camera_angles = (np.pi/2) - raw_angles
         box_corners = self.box_parametrization_to_corners_np(
             box_centers[None, ...],
             raw_sizes.astype(np.float32)[None, ...],
@@ -2075,9 +2198,18 @@ class Get3detrLabels(object):
         ret_dict["point_cloud_dims_max"] = point_cloud_dims_max
 
         results['ret_dict'] = ret_dict
+
+
+        pickle.dump(results['gt_bboxes_3d'].tensor,open('original_gt2.pkl','wb'))
+        pickle.dump(ret_dict,open('fixed_ret_dict2.pkl','wb'))
+        pickle.dump(point_cloud,open('fixed_point_cloud2.pkl','wb'))
         return results
     def __repr__(self):
         repr_str = self.__class__.__name__
         # repr_str += f'(shift_scale={self.shift_scale}, '
         # repr_str += f'aug_prob={self.aug_prob}) '
         return repr_str
+
+
+
+    

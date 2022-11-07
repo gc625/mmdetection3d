@@ -110,7 +110,7 @@ class SetCriterion(nn.Module):
             "loss_giou": self.loss_giou,
             # this isn't used during training and is logged for debugging.
             # thus, this loss does not have a loss_weight associated with it.
-            "loss_cardinality": self.loss_cardinality,
+            # "loss_cardinality": self.loss_cardinality,
         }
 
     @torch.no_grad()
@@ -357,14 +357,6 @@ class SetCriterion(nn.Module):
         return final_loss, losses
 
 
-    # gt_box_present, 
-    # nactual_gt, 
-    # num_boxes, 
-    # num_boxes_replica,
-    # box_corners,
-    # gt_box_corners
-    # gt_box_angles
-    # gt_box_centers_normalized
     def forward(self, outputs, targets):
         nactual_gt = targets["gt_box_present"].sum(axis=1).long()
         num_boxes = torch.clamp(all_reduce_average(nactual_gt.sum()), min=1).item()

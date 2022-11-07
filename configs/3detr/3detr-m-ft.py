@@ -4,7 +4,31 @@ _base_ = [
 ]
 
 
+model = dict(
+    backbone=dict(
+        type = 'DETR3D_BACKBONE',
 
+        preenc_dict = dict(
+            use_color = False,
+            enc_dim = 256, # same 
+            preenc_npoints = 2048
+        ),
+
+        encoder_dict = dict(
+            # enc_type = 'masked',
+            enc_dim = 256, # same
+            enc_nhead = 8,
+            enc_ffn_dim = 128,
+            enc_dropout = 0.1,
+            enc_activation = 'relu',
+            enc_nlayers = 3,
+            enc_pos_embed = None,
+            preenc_npoints = 2048
+        ),
+
+        num_queries = 128
+    )
+)
 # dataset settings
 dataset_type = 'KittiDataset'
 data_root = 'data/vod/lidar/'
@@ -70,6 +94,7 @@ train_pipeline = [
 
 # In practice PointPillars also uses a different schedule
 # optimizer
+resume_from = '/home/gabriel/mmdetection3d/work_dirs/3detr-m-ft-center-fix/epoch_6.pth'
 lr = 5e-4
 optimizer = dict(type='AdamW', lr=lr, weight_decay=0)
 # max_norm=35 is slightly better than 10 for PointPillars in the earlier
@@ -78,7 +103,7 @@ optimizer = dict(type='AdamW', lr=lr, weight_decay=0)
 optimizer_config = dict(grad_clip=dict(max_norm=20, norm_type=2))
 lr_config = dict(policy='step', warmup=None, step=[45, 60])
 
-runner = dict(type='EpochBasedRunner', max_epochs=40)
+runner = dict(type='EpochBasedRunner', max_epochs=80)
 
 # Use evaluation interval=2 reduce the number of evaluation timese
 evaluation = dict(interval=2)

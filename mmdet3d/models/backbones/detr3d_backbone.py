@@ -14,7 +14,7 @@ from mmdet3d.ops.detr3d_modules.helpers import GenericMLP
 from mmdet3d.ops.detr3d_modules.position_embedding import PositionEmbeddingCoordsSine
 from mmdet3d.ops.detr3d_modules.transformer import (MaskedTransformerEncoder, TransformerDecoder,
                                 TransformerDecoderLayer, TransformerEncoder,
-                                TransformerEncoderLayer)
+                                TransformerEncoderLayer,MultiMaskedTransformerEncoder)
 
 
 
@@ -88,6 +88,8 @@ class DETR3D_BACKBONE(nn.Module):
 
     
     def get_query_embeddings(self, encoder_xyz, point_cloud_dims):
+
+        # ! going from 1024 to 128 
         query_inds = furthest_point_sample(encoder_xyz, self.num_queries)
         query_inds = query_inds.long()
         query_xyz = [torch.gather(encoder_xyz[..., x], 1, query_inds) for x in range(3)]
@@ -132,7 +134,7 @@ class DETR3D_BACKBONE(nn.Module):
         return enc_xyz, enc_features, enc_inds
 
     
-    def forward(self, inputs, encoder_only=False):
+    def forward(self, inputs, img=None,encoder_only=False):
         point_clouds = inputs["point_clouds"]
 
         enc_xyz, enc_features, enc_inds = self.run_encoder(point_clouds)
@@ -153,6 +155,8 @@ class DETR3D_BACKBONE(nn.Module):
         query_xyz, query_embed = self.get_query_embeddings(enc_xyz, point_cloud_dims)
         # query_embed: batch x channel x npoint
         enc_pos = self.pos_embedding(enc_xyz, input_range=point_cloud_dims)
+
+        
 
         # decoder expects: npoints x batch x channel
         enc_pos = enc_pos.permute(2, 0, 1)
@@ -208,6 +212,7 @@ def build_encoder_withargs(args):
     enc_activation = args['enc_activation']
     enc_nlayers = args['enc_nlayers'] 
     preenc_npoints = args['preenc_npoints']
+    interim_indices = args['interim_indices']
 
 
     if enc_type == 'vanilla':
@@ -240,9 +245,20 @@ def build_encoder_withargs(args):
         masking_radius = [math.pow(x, 2) for x in [0.4, 0.8, 1.2]]
         encoder = MaskedTransformerEncoder(
             encoder_layer=encoder_layer,
-            num_layers=3,
+            num_layers=enc_nlayers,
             interim_downsampling=interim_downsampling,
             masking_radius=masking_radius,
+        )
+
+    elif enc_type in ['multi']:
+        # ! UNDER CONSTRUCTION
+
+        encoder = MultiMaskedTransformerEncoder(
+            encoder_layer=encoder_layer,
+            num_layers=enc_nlayers,
+            interim_downsampling=interim_downsampling,
+            masking_radius=masking_radius,
+            interim_indices=interim_indices
         )
     else:
         raise ValueError(f"Unknown encoder type {enc_type}")

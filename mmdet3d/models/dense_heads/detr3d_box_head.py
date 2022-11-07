@@ -52,8 +52,9 @@ class BoxProcessor(object):
         return angle
 
     def dataset_box_parametrization_to_corners(self, box_center_unnorm, box_size, box_angle):
-        box_center_upright = flip_lidar_axis_to_camera_tensor(box_center_unnorm)
-        boxes = get_3d_box_batch_tensor(box_size, box_angle, box_center_upright)
+        # box_center_upright = flip_lidar_axis_to_camera_tensor(box_center_unnorm)
+
+        boxes = get_3d_box_batch_tensor(box_size, box_angle, box_center_unnorm)
         return boxes
 
 
@@ -222,6 +223,9 @@ class DETR3DBboxHead(BaseModule):
                 box_corners = self.box_processor.dataset_box_parametrization_to_corners(
                     center_unnormalized, size_unnormalized, angle_continuous
                 )
+
+
+                # convert_z_to_bottom(center)
 
                 # below are not used in computing loss (only for matching/mAP eval)
                 # we compute them with no_grad() so that distributed training does not complain about unused variables

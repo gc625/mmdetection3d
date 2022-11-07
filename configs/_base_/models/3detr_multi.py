@@ -13,7 +13,7 @@ model = dict(
         ),
 
         encoder_dict = dict(
-            enc_type = 'masked',
+            enc_type = 'multi',
             enc_dim = 256, # same
             enc_nhead = 4,
             enc_ffn_dim = 128,
@@ -21,11 +21,9 @@ model = dict(
             enc_activation = 'relu',
             enc_nlayers = 3,
             enc_pos_embed = None,
-            preenc_npoints = 2048,
+            preenc_npoints = [4096,2048,1024],
             interim_indices = [0,1,2]
         ),
-
-        
 
         decoder_dict = dict(
             dec_dim = 256,
@@ -38,7 +36,7 @@ model = dict(
         encoder_dim = 256, #enc_dim
         decoder_dim = 256, #dec_dim
         mlp_dropout = 0.3, #mlp_dropout
-        num_queries = 256, # nqueries
+        num_queries = 128, # nqueries
 
 
         # enc_nlayers = 3,

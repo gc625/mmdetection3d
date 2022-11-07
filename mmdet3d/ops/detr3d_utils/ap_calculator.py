@@ -26,6 +26,17 @@ def flip_axis_to_depth(pc):
     pc2[..., 2] *= -1
     return pc2
 
+def flip_axis_to_lidar(pc): 
+    pc2 = np.copy(pc)
+    pc2[..., [0, 1, 2]] = pc2[..., [2, 0, 1]]  # cam X,Y,Z = lidar -Y,-Z,X
+    pc2[..., 2] *= -1                          # lidar X,Y,Z = camera Z, -X, -Y
+    pc2[..., 1] *= -1
+    return pc2
+
+
+
+
+
 
 def softmax(x):
     """Numpy function for softmax"""
@@ -242,7 +253,7 @@ def parse_predictions(
 
 
 def parse_predictions_mmdet(
-    predicted_boxes, sem_cls_probs, objectness_probs, point_cloud, config_dict
+    predicted_boxes, sem_cls_probs, objectness_probs, angle_continuous,center_unnormalized,size_unnormalized,point_cloud,img_metas
 ):
     """Parse predictions to OBB parameters and suppress overlapping boxes
 
@@ -261,6 +272,17 @@ def parse_predictions_mmdet(
             where j = 0, ..., num of valid detections - 1 from sample input i
     """
 
+    angle_continuous=angle_continuous
+    center_unnormalized=center_unnormalized
+    size_unnormalized=size_unnormalized
+
+
+
+
+    predicted_boxes = predicted_boxes[0] if isinstance(predicted_boxes,tuple) else predicted_boxes
+    sem_cls_probs = sem_cls_probs[0] if isinstance(sem_cls_probs,tuple) else sem_cls_probs
+    objectness_probs = objectness_probs[0] if isinstance(objectness_probs,tuple) else objectness_probs
+    
     sem_cls_probs = sem_cls_probs.detach().cpu().numpy()  # B,num_proposal,10
     pred_sem_cls_prob = np.max(sem_cls_probs, -1)  # B,num_proposal
     # TODO: SHOULDNT THIS BE ARGMAXING pred_sem_cls_prob ????????
@@ -281,7 +303,7 @@ def parse_predictions_mmdet(
         pc = batch_pc[i, :, :]  # (N,3)
         for j in range(K):
             box3d = pred_corners_3d_upright_camera[i, j, :, :]  # (8,3)
-            box3d = flip_axis_to_depth(box3d)
+            # box3d = flip_axis_to_lidar(box3d)
             pc_in_box, inds = extract_pc_in_box3d(pc, box3d)
             if len(pc_in_box) < 5:
                 nonempty_box_mask[i, j] = 0
@@ -494,7 +516,59 @@ def parse_predictions_mmdet(
                     and obj_prob[i, j] > 0.05 #TODO: HARDCODING NOW, ADD TO CFG LATER
                 ]
             )
-    return batch_pred_map_cls
+
+
+    boxes3d = torch.concat((center_unnormalized,size_unnormalized,angle_continuous.unsqueeze(2)),dim=2)
+    batch_pred_center = []
+
+    batch_pred_center.append(
+            [
+                (
+                    pred_sem_cls[i, j].item(),
+                    boxes3d[i, j],
+                    obj_prob[i, j],
+                )
+                for j in range(center_unnormalized.shape[1])
+                if pred_mask[i, j] == 1
+                # and obj_prob[i, j] > config_dict["conf_thresh"]
+                and obj_prob[i, j] > 0.05 #TODO: HARDCODING NOW, ADD TO CFG LATER
+            ]
+        )        
+
+    boxed_3d = []
+    scores = []
+    labels_3d = []
+    if len(batch_pred_center[0]) == 0:
+        return dict(
+        boxes_3d=img_metas['box_type_3d'](torch.empty((1,7)).to('cpu'),box_dim=7),
+        scores_3d=torch.empty((1)),
+        labels_3d=torch.empty((1))
+
+    )
+
+    for detection in batch_pred_center[0]:
+
+        height = detection[1][5]
+        offset = height/2
+        detection[1][2] -= offset
+
+        boxed_3d += [detection[1]]
+        scores += [detection[2]]
+        labels_3d += [detection[0]]  
+
+
+    # boxed_3d += [img_metas['box_type_3d'](detection[1],box_dim=7)]
+        
+
+    result_dict = dict(
+        boxes_3d=img_metas['box_type_3d'](torch.stack(boxed_3d),box_dim=7).to('cpu'),
+        scores_3d=torch.FloatTensor(scores).cpu(),
+        labels_3d=torch.LongTensor(labels_3d).cpu()
+
+    )
+
+    return result_dict
+
 
 
 
@@ -566,7 +640,7 @@ class APCalculator(object):
                     (gt_box_sem_cls_labels[i, j].item(), gt_box_corners[i, j])
                     for j in range(gt_box_corners.shape[1])
                     if gt_box_present[i, j] == 1
-                ]
+         ]
             )
         return batch_gt_map_cls
 
