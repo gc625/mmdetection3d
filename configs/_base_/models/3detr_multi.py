@@ -1,19 +1,18 @@
 model = dict(
     type = 'DETR3D',
     backbone = dict(
-        type = 'DETR3D_BACKBONE',
-        # enc_type = 'maskedv2', # choices=["masked", "maskedv2", "vanilla"]
-        # Vanilla encoder args
-
+        type = 'DETR3D_multiscale_backbone',
 
         preenc_dict = dict(
-            use_color = False,
-            enc_dim = 256, # same 
-            preenc_npoints = 2048
+            enc_dim = 256, 
+            preenc_npoints = 2048,
+            radius = 0.2,
+            nsample = 64,
         ),
 
         encoder_dict = dict(
             enc_type = 'multi',
+            preenc_npoints = 2048,
             enc_dim = 256, # same
             enc_nhead = 4,
             enc_ffn_dim = 128,
@@ -21,22 +20,53 @@ model = dict(
             enc_activation = 'relu',
             enc_nlayers = 3,
             enc_pos_embed = None,
-            preenc_npoints = [4096,2048,1024],
-            interim_indices = [0,1,2]
+            
+
+
+            
+
+            ## INTERIM DOWNSMPLING SETTINGS
+            interim_dict = dict(
+                num_points = [2048,1024,512],
+                radii = ((0.2, 0.4, 0.8), (0.4, 0.8, 1.6), (1.6, 3.2, 4.8)), #!
+                num_samples=((32, 32, 64), (32, 32, 64), (32, 32, 32)),
+                sa_channels =(
+                    ([128, 128, 256], [128, 192, 256], [128, 256,256]),
+                    ([128, 128, 256], [128, 192, 256], [128, 256,256]),
+                    ([128, 128, 256], [128, 192, 256], [128, 256,256])
+                ),
+                aggregation_channels=(64, 128, 256),
+                fps_mods=(('D-FPS'), ('CTR-S'),('CTR-S')),
+                fps_sample_range_lists=((-1), (-1), (-1)),
+                dilated_group=(True, True, True),
+                norm_cfg=dict(type='BN2d'),
+                sa_cfg=dict(
+                     type='PointSAModuleMSG',
+                     pool_mod='max',
+                     use_xyz=True,
+                     normalize_xyz=False),
+
+            )
+
+
+
+
+
+
         ),
 
-        decoder_dict = dict(
-            dec_dim = 256,
-            dec_nhead = 4,
-            dec_ffn_dim = 256,
-            dec_dropout = 0.1,
-            dec_nlayers = 8
-        ),
-
-        encoder_dim = 256, #enc_dim
-        decoder_dim = 256, #dec_dim
-        mlp_dropout = 0.3, #mlp_dropout
-        num_queries = 128, # nqueries
+        # decoder_dict = dict(
+        #     dec_dim = 256,
+        #     dec_nhead = 4,
+        #     dec_ffn_dim = 256,
+        #     dec_dropout = 0.1,
+        #     dec_nlayers = 8
+        # ),
+# 
+        # encoder_dim = 256, #enc_dim
+        # decoder_dim = 256, #dec_dim
+        # mlp_dropout = 0.3, #mlp_dropout
+        # num_queries = 128, # nqueries
 
 
         # enc_nlayers = 3,
