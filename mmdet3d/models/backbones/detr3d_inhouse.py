@@ -2,6 +2,7 @@
 from json import encoder
 import math
 from functools import partial
+from mmcv.cnn import ConvModule
 from ..builder import BACKBONES
 import numpy as np
 import torch
@@ -60,13 +61,25 @@ def build_encoder(args):
     dilated_group = interim_dict['dilated_group']
     norm_cfg = interim_dict['norm_cfg']
     sa_cfg = interim_dict['sa_cfg']
-
+    aggregation_channels = interim_dict['aggregation_channels']
 
     sa_layers = []
+    aggregation_mlps = []
     for sa_index in range(len(num_points)):
         cur_sa_mlps = list(sa_channels[sa_index])
         cur_fps_mod = list([fps_mods[sa_index]])
         cur_fps_sample_range_list = list([fps_sample_range_lists[sa_index]])
+        
+
+        ## !! ??? check out the dims 
+        sa_in_channel = enc_dim
+        sa_out_channel = 0
+        for radius_index in range(len(radii[sa_index])):
+            cur_sa_mlps[radius_index] = [sa_in_channel] + list(
+                cur_sa_mlps[radius_index])
+            sa_out_channel += cur_sa_mlps[radius_index][-1]
+        
+        
         
         sa_layer = build_sa_module(
                         num_point=num_points[sa_index],
@@ -78,23 +91,19 @@ def build_encoder(args):
                         dilated_group=dilated_group[sa_index],
                         norm_cfg=norm_cfg,
                         cfg=sa_cfg,
-                        bias=True)
-        sa_layers += [sa_layer]
+                        bias=True).to('cuda')
+        sa_layers += [sa_layer]    
+        cur_aggregation_channel = aggregation_channels[sa_index]
+        aggregation_mlps += [ConvModule(
+                        sa_out_channel,
+                        cur_aggregation_channel,
+                        conv_cfg=dict(type='Conv1d'),
+                        norm_cfg=dict(type='BN1d'),
+                        kernel_size=1,
+                        bias=True).to('cuda')]
 
 
-    encoder_layers = []
 
-    for i in range
-
-
-
-
-    
-
-
-    
-    
-    
     encoder_layer = TransformerEncoderLayer(
         d_model = enc_dim,
         nhead = enc_nhead,
@@ -104,13 +113,13 @@ def build_encoder(args):
     )    
 
 
-    interim_downsampling = PointnetSAModuleVotes(
-        radius=0.4,
-        nsample=32,
-        npoint= preenc_npoints // 2,
-        mlp=[ enc_dim, 256, 256, enc_dim],
-        normalize_xyz=True,
-    )
+    # interim_downsampling = PointnetSAModuleVotes(
+    #     radius=0.4,
+    #     nsample=32,
+    #     npoint= preenc_npoints // 2,
+    #     mlp=[ enc_dim, 256, 256, enc_dim],
+    #     normalize_xyz=True,
+    # )
 
 
     
@@ -129,10 +138,13 @@ def build_encoder(args):
     encoder = MultiMaskedTransformerEncoder(
     encoder_layer=encoder_layer,
     num_layers=enc_nlayers,
-    interim_downsampling=interim_downsampling,
+    interim_downsampling=None,
     masking_radius=masking_radius,
-    interim_indices=interim_indices
+    sa_layers = sa_layers,
+    aggregation_channels = aggregation_mlps
     )
+
+    return encoder
 
 
 

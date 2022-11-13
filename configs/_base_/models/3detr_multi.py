@@ -5,14 +5,14 @@ model = dict(
 
         preenc_dict = dict(
             enc_dim = 256, 
-            preenc_npoints = 2048,
+            preenc_npoints = 4096,
             radius = 0.2,
             nsample = 64,
         ),
 
         encoder_dict = dict(
             enc_type = 'multi',
-            preenc_npoints = 2048,
+            preenc_npoints = 4096,
             enc_dim = 256, # same
             enc_nhead = 4,
             enc_ffn_dim = 128,
@@ -27,7 +27,7 @@ model = dict(
 
             ## INTERIM DOWNSMPLING SETTINGS
             interim_dict = dict(
-                num_points = [2048,1024,512],
+                num_points = [1024,512,256],
                 radii = ((0.2, 0.4, 0.8), (0.4, 0.8, 1.6), (1.6, 3.2, 4.8)), #!
                 num_samples=((32, 32, 64), (32, 32, 64), (32, 32, 32)),
                 sa_channels =(
@@ -35,8 +35,8 @@ model = dict(
                     ([128, 128, 256], [128, 192, 256], [128, 256,256]),
                     ([128, 128, 256], [128, 192, 256], [128, 256,256])
                 ),
-                aggregation_channels=(64, 128, 256),
-                fps_mods=(('D-FPS'), ('CTR-S'),('CTR-S')),
+                aggregation_channels=[256, 256, 256],
+                fps_mods=(('CTR-S'), ('CTR-S'),('CTR-S')),
                 fps_sample_range_lists=((-1), (-1), (-1)),
                 dilated_group=(True, True, True),
                 norm_cfg=dict(type='BN2d'),

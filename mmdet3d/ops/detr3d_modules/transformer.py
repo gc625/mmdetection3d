@@ -215,19 +215,16 @@ class MaskedTransformerEncoder(TransformerEncoder):
         
 
 
-
-
-
-
-
 class MultiMaskedTransformerEncoder(TransformerEncoder):
-    def __init__(self, encoder_layer, num_layers, masking_radius, interim_downsampling, interim_indices,
+    def __init__(self, encoder_layer, num_layers, masking_radius, interim_downsampling, sa_layers,aggregation_channels,
                  norm=None, weight_init_name="xavier_uniform"):
         super().__init__(encoder_layer, num_layers, norm=norm, weight_init_name=weight_init_name)
     
         self.masking_radius = masking_radius 
-        self.interim_downsampling_modules = interim_downsampling
-        self.interm_indices = [True if i in interim_indices else False for i in range(num_layers)]
+        # self.interim_downsampling_modules = interim_downsampling
+        self.sa_layers = sa_layers
+        self.aggregation_channels = aggregation_channels
+        # self.interm_indices = [True if i in interim_indices else False for i in range(num_layers)]
 
     def compute_mask(self, xyz, radius, dist=None):
         with torch.no_grad():
@@ -269,21 +266,26 @@ class MultiMaskedTransformerEncoder(TransformerEncoder):
 
             output = layer(output, src_mask=mask, src_key_padding_mask=src_key_padding_mask, pos=pos)
 
-            if idx == 0 and self.interim_downsampling:
-                # output is npoints x batch x channel. make batch x channel x npoints
-                output = output.permute(1, 2, 0)
-                xyz, output, xyz_inds = self.interim_downsampling(xyz, output)
-                # swap back
-                output = output.permute(2, 0, 1)
+            output = output.permute(1,2,0)
+
+
+            xyz,output,xyz_inds  = self.sa_layers[idx](points_xyz=xyz,features=output)
+            output = self.aggregation_channels[idx](output)
+
+
+
+
+            output = output.permute(2, 0, 1)
+
+            # if idx == 0 and self.interim_downsampling:
+            #     # output is npoints x batch x channel. make batch x channel x npoints
+            #     output = output.permute(1, 2, 0)
+            #     xyz, output, xyz_inds = self.interim_downsampling(xyz, output)
+            #     # swap back
+            #     output = output.permute(2, 0, 1)
 
 
             
-
-
-
-
-
-
         if self.norm is not None:
             output = self.norm(output)
 
