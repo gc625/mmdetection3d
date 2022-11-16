@@ -166,6 +166,10 @@ class VoteHead(BaseModule):
             vote_features=vote_features,
             vote_offset=vote_offset)
 
+        import pickle
+        vote_module_output = (vote_points, vote_features, vote_offset)
+        pickle.dump(vote_module_output,open('vote_module_output.pkl','wb'))
+
         # 2. aggregate vote_points
         if sample_mod == 'vote':
             # use fps in vote_aggregation
@@ -201,6 +205,10 @@ class VoteHead(BaseModule):
 
         vote_aggregation_ret = self.vote_aggregation(**aggregation_inputs)
         aggregated_points, features, aggregated_indices = vote_aggregation_ret
+
+        vote_agg_ret = (aggregated_points, features, aggregated_indices)
+        pickle.dump(vote_agg_ret,open('vote_agg_ret.pkl','wb'))
+
 
         results['aggregated_points'] = aggregated_points
         results['aggregated_features'] = features

@@ -64,7 +64,7 @@ train_pipeline = [
     # dict(type='Get3detrLabels'),
     dict(type='GetPointcloudMinMax'),
     dict(type='DefaultFormatBundle3D', class_names=class_names),
-    dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d','point_cloud_dims_min','point_cloud_dims_max'])
+    dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
 
 ]
 
@@ -78,10 +78,10 @@ optimizer = dict(type='AdamW', lr=lr, weight_decay=0)
 optimizer_config = dict(grad_clip=dict(max_norm=20, norm_type=2))
 lr_config = dict(policy='step', warmup=None, step=[45, 60])
 
-runner = dict(type='EpochBasedRunner', max_epochs=40)
-
+runner = dict(type='EpochBasedRunner', max_epochs=80)
+resume_from = '/home/gabriel/mmdetection3d/work_dirs/3detr-m-inhouse/epoch_7.pth'
 # Use evaluation interval=2 reduce the number of evaluation timese
-evaluation = dict(interval=2)
+evaluation = dict(interval=3)
 
 
 #    parser.add_argument("--base_lr", default=5e-4, type=float)

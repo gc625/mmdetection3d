@@ -139,43 +139,63 @@ def vis_val():
     # val_frm = '/home/gabriel/mmdetection3d/data/vod/lidar/ImageSets/val.txt'
     # frame_ids  = [P(f).stem for f in glob(str(dt_path)+"/*")]
     frame_data = FrameDataLoader(kitti_locations,
-                                "000000","")
+                                "000002","")
     vod_calib = FrameTransformMatrix(frame_data)
 
     vod_labels = FrameLabels(frame_data.get_labels()).labels_dict
     bbxes = vod_to_o3d(vod_labels,vod_calib)
 
+    points = []
 
-    enc_xyz = pickle.load(open('00000_enc_xyz.pkl','rb'))
-    query_xyz = pickle.load(open('00000_query_xyz.pkl','rb'))
-    point_cloud = pickle.load(open('00000_point_clouds.pkl','rb'))
+    # ret0 = pickle.load(open('/home/gabriel/mmdetection3d/pre_enc_output.pkl','rb'))
+    ret1 = pickle.load(open('/home/gabriel/mmdetection3d/layer0_output.pkl','rb'))
+    ret2 = pickle.load(open('/home/gabriel/mmdetection3d/layer1_output.pkl','rb'))
+    ret3 = pickle.load(open('/home/gabriel/mmdetection3d/layer2_output.pkl','rb'))
+    ret4 = pickle.load(open('/home/gabriel/mmdetection3d/vote_agg_ret.pkl','rb'))
+
+    stuff = [ret1,ret2,ret3,ret4]
+
+    geometries = []
+    for ret in stuff:
+        points = ret[0].squeeze(0).cpu().numpy()
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(points)
+        colors = np.zeros_like(points)
+        colors[:,0] = 1
+        geometries += [pcd]
 
 
-    enc_pcd = o3d.geometry.PointCloud()
-    query_pcd = o3d.geometry.PointCloud()
-    point_pcd = o3d.geometry.PointCloud()
+
+    # enc_xyz = pickle.load(open('00000_enc_xyz.pkl','rb'))
+    # query_xyz = pickle.load(open('00000_query_xyz.pkl','rb'))
+    # point_cloud = pickle.load(open('00000_point_clouds.pkl','rb'))
+
+
+    # enc_pcd = o3d.geometry.PointCloud()
+    # query_pcd = o3d.geometry.PointCloud()
+    # point_pcd = o3d.geometry.PointCloud()
     
-    enc_colors = np.zeros_like(enc_xyz.squeeze(0).cpu().numpy())
-    query_colors = np.zeros_like(query_xyz.squeeze(0).cpu().numpy())
-    point_colors = np.zeros_like(point_cloud.squeeze(0)[:,:3].cpu().numpy())
+    # enc_colors = np.zeros_like(enc_xyz.squeeze(0).cpu().numpy())
+    # query_colors = np.zeros_like(query_xyz.squeeze(0).cpu().numpy())
+    # point_colors = np.zeros_like(point_cloud.squeeze(0)[:,:3].cpu().numpy())
     
-    enc_colors[:,0] = 1
-    query_colors[:,1] = 1
-    point_colors[:,2] = 1
+    # enc_colors[:,0] = 1
+    # query_colors[:,1] = 1
+    # point_colors[:,2] = 1
 
     
-    enc_pcd.points = o3d.utility.Vector3dVector(enc_xyz.squeeze(0).cpu().numpy())
-    query_pcd.points = o3d.utility.Vector3dVector(query_xyz.squeeze(0).cpu().numpy())
-    point_pcd.points = o3d.utility.Vector3dVector(point_cloud.squeeze(0)[:,:3].cpu().numpy())
+    # enc_pcd.points = o3d.utility.Vector3dVector(enc_xyz.squeeze(0).cpu().numpy())
+    # query_pcd.points = o3d.utility.Vector3dVector(query_xyz.squeeze(0).cpu().numpy())
+    # point_pcd.points = o3d.utility.Vector3dVector(point_cloud.squeeze(0)[:,:3].cpu().numpy())
 
-    enc_pcd.colors = o3d.utility.Vector3dVector(enc_colors)
-    query_pcd.colors = o3d.utility.Vector3dVector(query_colors)
-    point_pcd.colors = o3d.utility.Vector3dVector(point_colors)
+    # enc_pcd.colors = o3d.utility.Vector3dVector(enc_colors)
+    # query_pcd.colors = o3d.utility.Vector3dVector(query_colors)
+    # point_pcd.colors = o3d.utility.Vector3dVector(point_colors)
 
     # vis = o3d.visualization.Visualizer()
     # vis.create_window() 
 
-    geometries = [enc_pcd,query_pcd,point_pcd]
+    # geometries = [enc_pcd,query_pcd,point_pcd]
 
     mat = o3d.visualization.rendering.MaterialRecord()
     mat.shader = 'defaultUnlit'

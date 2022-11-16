@@ -79,8 +79,18 @@ def build_encoder(args):
                 cur_sa_mlps[radius_index])
             sa_out_channel += cur_sa_mlps[radius_index][-1]
         
-        
-        
+
+        if isinstance(fps_mods[sa_index], tuple):
+            cur_fps_mod = list(fps_mods[sa_index])
+        else:
+            cur_fps_mod = list([fps_mods[sa_index]]) 
+        if isinstance(fps_sample_range_lists[sa_index], tuple):
+            cur_fps_sample_range_list = list(
+                fps_sample_range_lists[sa_index])
+        else:
+            cur_fps_sample_range_list = list(
+                [fps_sample_range_lists[sa_index]])
+    
         sa_layer = build_sa_module(
                         num_point=num_points[sa_index],
                         radii=radii[sa_index],
@@ -92,7 +102,9 @@ def build_encoder(args):
                         norm_cfg=norm_cfg,
                         cfg=sa_cfg,
                         bias=True).to('cuda')
+
         sa_layers += [sa_layer]    
+
         cur_aggregation_channel = aggregation_channels[sa_index]
         aggregation_mlps += [ConvModule(
                         sa_out_channel,
@@ -126,7 +138,7 @@ def build_encoder(args):
 
 
 
-    masking_radius = [math.pow(x, 2) for x in [0.4, 0.8, 1.2]]
+    masking_radius = [math.pow(x, 2) for x in [0.8, 1.6, 4.8]]
     # encoder = MaskedTransformerEncoder(
     #     encoder_layer=encoder_layer,
     #     num_layers=enc_nlayers,
@@ -166,11 +178,6 @@ class DETR3D_multiscale_backbone(nn.Module):
         self.encoder = build_encoder(encoder_dict)
         self.num_queries = num_queries
 
-
-
-        # self.pos_embedding = PositionEmbeddingCoordsSine(
-        #     d_pos=decoder_dim, pos_type=position_embedding, normalize=True
-        # )        
     def _break_up_pc(self, pc):
         # pc may contain color/normals.
 
@@ -184,6 +191,11 @@ class DETR3D_multiscale_backbone(nn.Module):
         # xyz: batch x npoints x 3
         # features: batch x channel x npoints
         # inds: batch x npoints
+
+        import pickle
+        pre_enc_output = pre_enc_xyz
+        pickle.dump(pre_enc_output,open('pre_enc_output.pkl','wb'))
+
 
         # nn.MultiHeadAttention in encoder expects npoints x batch x channel features
         pre_enc_features = pre_enc_features.permute(2, 0, 1)
@@ -201,9 +213,15 @@ class DETR3D_multiscale_backbone(nn.Module):
         return enc_xyz, enc_features, enc_inds
 
 
-    def forward(self, inputs, img=None,encoder_only=False):
-        point_clouds = inputs["point_clouds"]
-
+    def forward(self, point_clouds, img=None,encoder_only=False):
         enc_xyz, enc_features, enc_inds = self.run_encoder(point_clouds)
-        
+
+
+        ret_dict = {
+            'sa_xyz':[enc_xyz],
+            'sa_features':[enc_features.permute(1,2,0)],
+            'sa_indices':[enc_inds]
+        }
+
+        return ret_dict
 

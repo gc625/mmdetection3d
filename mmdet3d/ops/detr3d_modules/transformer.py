@@ -272,7 +272,9 @@ class MultiMaskedTransformerEncoder(TransformerEncoder):
             xyz,output,xyz_inds  = self.sa_layers[idx](points_xyz=xyz,features=output)
             output = self.aggregation_channels[idx](output)
 
-
+            layer_output = (xyz,output,xyz_inds)
+            import pickle
+            pickle.dump(layer_output,open(f'layer{idx}_output.pkl','wb'))
 
 
             output = output.permute(2, 0, 1)
